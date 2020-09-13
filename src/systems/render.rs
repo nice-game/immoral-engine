@@ -42,7 +42,6 @@ impl Render {
 			gl::VertexArrayAttribFormat(vao, 0, size_of::<Vector2<f32>>() as _, gl::FLOAT, gl::FALSE, 0);
 			gl::VertexArrayAttribBinding(vao, 0, 0);
 
-			println!("shader: {}", shader);
 			Self { shader, vao }
 		}
 	}
