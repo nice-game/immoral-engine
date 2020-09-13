@@ -1,0 +1,15 @@
+[package]
+name = "immoral-engine"
+version = "0.1.0"
+authors = ["Icy Defiance <icydefiance@gmail.com>"]
+edition = "2018"
+
+[workspace]
+members = ["lib/gl"]
+
+[dependencies]
+array-init = "0.1.1"
+gl = { path = "lib/gl" }
+glutin = "0.24.1"
+nalgebra = "0.22.0"
+specs = { version = "0.16.1", features = ["specs-derive"] }

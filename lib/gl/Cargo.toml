@@ -1,0 +1,10 @@
+[package]
+name = "gl"
+version = "0.1.0"
+authors = ["Icy Defiance <icydefiance@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+
+[build-dependencies]
+gl_generator = "0.5.0"
