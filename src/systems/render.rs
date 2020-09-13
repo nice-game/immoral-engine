@@ -1,48 +1,48 @@
-use crate::components::mesh::{Mesh, Vertex};
-use array_init::array_init;
+use crate::{
+	components::mesh::{Mesh, Vertex},
+	Ctx,
+};
 use gl::types::GLuint;
 use nalgebra::Vector2;
 use specs::{prelude::*, System};
-use std::{
-	ffi::{CStr, CString},
-	mem::size_of,
-	ptr,
-};
+use std::{ffi::CString, iter::repeat, mem::size_of, ptr, sync::Arc};
 
 pub struct Render {
+	ctx: Arc<Ctx>,
 	shader: GLuint,
 	vao: GLuint,
 }
 impl Render {
-	pub fn new() -> Self {
+	pub fn new(ctx: &Arc<Ctx>) -> Self {
 		unsafe {
 			let src = CString::new(include_str!("../shaders/shader.vert")).unwrap();
-			let vshader = gl::CreateShader(gl::VERTEX_SHADER);
-			gl::ShaderSource(vshader, 1, [src.as_ptr()].as_ptr(), ptr::null());
-			gl::CompileShader(vshader);
-			check_shader(vshader);
+			let vshader = ctx.gl.CreateShader(gl::VERTEX_SHADER);
+			ctx.gl.ShaderSource(vshader, 1, [src.as_ptr()].as_ptr(), ptr::null());
+			ctx.gl.CompileShader(vshader);
+			check_shader(ctx, vshader);
 
 			let src = CString::new(include_str!("../shaders/shader.frag")).unwrap();
-			let fshader = gl::CreateShader(gl::FRAGMENT_SHADER);
-			gl::ShaderSource(fshader, 1, [src.as_ptr()].as_ptr(), ptr::null());
-			gl::CompileShader(fshader);
-			check_shader(fshader);
+			let fshader = ctx.gl.CreateShader(gl::FRAGMENT_SHADER);
+			ctx.gl.ShaderSource(fshader, 1, [src.as_ptr()].as_ptr(), ptr::null());
+			ctx.gl.CompileShader(fshader);
+			check_shader(ctx, fshader);
 
-			let shader = gl::CreateProgram();
-			gl::AttachShader(shader, vshader);
-			gl::AttachShader(shader, fshader);
-			gl::LinkProgram(shader);
+			let shader = ctx.gl.CreateProgram();
+			ctx.gl.AttachShader(shader, vshader);
+			ctx.gl.AttachShader(shader, fshader);
+			ctx.gl.LinkProgram(shader);
+			check_program(ctx, shader);
 
-			gl::DeleteShader(fshader);
-			gl::DeleteShader(vshader);
+			ctx.gl.DeleteShader(fshader);
+			ctx.gl.DeleteShader(vshader);
 
 			let mut vao = 0;
-			gl::GenVertexArrays(1, &mut vao);
-			gl::EnableVertexArrayAttrib(vao, 0);
-			gl::VertexArrayAttribFormat(vao, 0, size_of::<Vector2<f32>>() as _, gl::FLOAT, gl::FALSE, 0);
-			gl::VertexArrayAttribBinding(vao, 0, 0);
+			ctx.gl.GenVertexArrays(1, &mut vao);
+			ctx.gl.EnableVertexArrayAttrib(vao, 0);
+			ctx.gl.VertexArrayAttribFormat(vao, 0, size_of::<Vector2<f32>>() as _, gl::FLOAT, gl::FALSE, 0);
+			ctx.gl.VertexArrayAttribBinding(vao, 0, 0);
 
-			Self { shader, vao }
+			Self { ctx: ctx.clone(), shader, vao }
 		}
 	}
 }
@@ -51,23 +51,36 @@ impl<'a> System<'a> for Render {
 
 	fn run(&mut self, meshes: Self::SystemData) {
 		unsafe {
-			gl::UseProgram(self.shader);
-			gl::BindVertexArray(self.vao);
+			self.ctx.gl.UseProgram(self.shader);
+			self.ctx.gl.BindVertexArray(self.vao);
 			for mesh in meshes.join() {
-				gl::VertexArrayVertexBuffer(self.vao, 0, mesh.vbo, 0, size_of::<Vertex>() as _);
-				gl::DrawArrays(gl::TRIANGLES, 0, 3);
+				self.ctx.gl.VertexArrayVertexBuffer(self.vao, 0, mesh.vbo, 0, size_of::<Vertex>() as _);
+				self.ctx.gl.DrawArrays(gl::TRIANGLES, 0, 3);
 			}
 		}
 	}
 }
 
-unsafe fn check_shader(shader: GLuint) {
+unsafe fn check_shader(ctx: &Ctx, shader: GLuint) {
 	let mut success = -1;
-	gl::GetShaderiv(shader, gl::COMPILE_STATUS, &mut success);
+	ctx.gl.GetShaderiv(shader, gl::COMPILE_STATUS, &mut success);
 	if success == 0 {
-		let mut info_log: [i8; 512] = array_init(|_| 0);
-		gl::GetShaderInfoLog(shader, 512, ptr::null_mut(), info_log.as_mut_ptr());
-		let info_log = CStr::from_ptr(info_log.as_ptr());
+		let mut len = 0;
+		ctx.gl.GetShaderiv(shader, gl::INFO_LOG_LENGTH, &mut len);
+		let mut info_log: String = repeat('\0').take(len as _).collect();
+		ctx.gl.GetShaderInfoLog(shader, 512, ptr::null_mut(), info_log.as_mut_ptr() as _);
+		panic!("{:?}", info_log);
+	}
+}
+
+unsafe fn check_program(ctx: &Ctx, program: GLuint) {
+	let mut success = -1;
+	ctx.gl.GetShaderiv(program, gl::LINK_STATUS, &mut success);
+	if success == 0 {
+		let mut len = 0;
+		ctx.gl.GetShaderiv(program, gl::INFO_LOG_LENGTH, &mut len);
+		let mut info_log: String = repeat('\0').take(len as _).collect();
+		ctx.gl.GetShaderInfoLog(program, 512, ptr::null_mut(), info_log.as_mut_ptr() as _);
 		panic!("{:?}", info_log);
 	}
 }
