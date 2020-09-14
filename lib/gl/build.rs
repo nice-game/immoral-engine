@@ -269,9 +269,26 @@ where
 			print_err = if cmd.proto.ident != "GetError"
 				&& registry.cmds.iter().find(|cmd| cmd.proto.ident == "GetError").is_some()
 			{
+				let mut map = std::collections::HashMap::new();
+				map.insert(0x0500, "GL_INVALID_ENUM");
+				map.insert(0x0502, "GL_INVALID_OPERATION");
+				map.insert(0x0501, "GL_INVALID_VALUE");
+				map.insert(0x0503, "GL_STACK_OVERFLOW");
+				map.insert(0x0504, "GL_STACK_UNDERFLOW");
+				map.insert(0x0505, "GL_OUT_OF_MEMORY");
+				map.insert(0x0506, "GL_INVALID_FRAMEBUFFER_OPERATION");
+				map.insert(0x0507, "GL_CONTEXT_LOST");
+				map.insert(0x8031, "GL_TABLE_TOO_LARGE1");
+				let mut stouf1 = std::string::String::new();
+				let mut stouf2 = "".to_owned();
+				for (asdf,fdsa) in &map {
+					stouf1 += &format!("if r=={0} {{\"{1}\".to_owned()}} else {{", asdf, fdsa);
+					stouf2 += "}";
+				}
 				format!(
 					r#"match __gl_imports::mem::transmute::<_, extern "system" fn() -> u32>
-                    (self.GetError.f)() {{ 0 => (), r => panic!("GL error triggered: {{}}", r) }}"#
+                    (self.GetError.f)() {{ 0 => (), r => panic!("GL error triggered: {{}}", {0} format!("{{}}",r) {1}) }}"#,
+					stouf1, stouf2
 				)
 			} else {
 				format!("")
