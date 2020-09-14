@@ -3,7 +3,6 @@ use crate::{
 	Ctx,
 };
 use gl::types::GLuint;
-use nalgebra::Vector2;
 use specs::{prelude::*, System};
 use std::{ffi::CString, iter::repeat, mem::size_of, ptr, sync::Arc};
 
@@ -37,9 +36,9 @@ impl Render {
 			ctx.gl.DeleteShader(vshader);
 
 			let mut vao = 0;
-			ctx.gl.GenVertexArrays(1, &mut vao);
+			ctx.gl.CreateVertexArrays(1, &mut vao);
 			ctx.gl.EnableVertexArrayAttrib(vao, 0);
-			ctx.gl.VertexArrayAttribFormat(vao, 0, size_of::<Vector2<f32>>() as _, gl::FLOAT, gl::FALSE, 0);
+			ctx.gl.VertexArrayAttribFormat(vao, 0, 2, gl::FLOAT, gl::FALSE, 0);
 			ctx.gl.VertexArrayAttribBinding(vao, 0, 0);
 
 			Self { ctx: ctx.clone(), shader, vao }
