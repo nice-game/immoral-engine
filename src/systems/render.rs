@@ -42,8 +42,8 @@ impl<'a> System<'a> for Render {
 		unsafe {
 			self.ctx.gl.UseProgram(self.shader);
 			for mesh in meshes.join() {
-				self.ctx.gl.DrawArrays(gl::TRIANGLES, 0, 3);
 				self.ctx.gl.BindVertexArray(mesh.vao);
+				self.ctx.gl.DrawArrays(gl::TRIANGLES, 0, 3);
 			}
 		}
 	}
