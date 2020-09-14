@@ -22,7 +22,7 @@ impl Mesh {
 			let size = (size_of::<Vertex>() * vertices.len()) as _;
 
 			ctx.gl.CreateBuffers(1, &mut vbo);
-			ctx.gl.NamedBufferData(vbo, size, [vertices.as_ptr()].as_ptr() as _, gl::STATIC_DRAW);
+			ctx.gl.NamedBufferData(vbo, size, vertices.as_ptr() as _, gl::STATIC_DRAW);
 
 			ctx.gl.CreateVertexArrays(1, &mut vao);
 			ctx.gl.EnableVertexArrayAttrib(vao, 0);
