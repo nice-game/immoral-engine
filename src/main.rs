@@ -62,6 +62,7 @@ impl Ctx {
 		let window = unsafe { window.make_current() }.unwrap();
 
 		let gl = Gl::load_with(|ptr| window.get_proc_address(ptr) as *const _);
+		assert_eq!(unsafe { gl.GetError() }, 0);
 
 		Arc::new(Self { window, gl })
 	}

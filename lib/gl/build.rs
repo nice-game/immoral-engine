@@ -1,6 +1,6 @@
 extern crate gl_generator;
 
-use gl_generator::{generators, Api, Fallbacks, Generator, GlobalGenerator, Profile, Registry};
+use gl_generator::{generators, Api, Fallbacks, Generator, Profile, Registry};
 use std::{env, fs::File, io, path::Path};
 
 fn main() {
