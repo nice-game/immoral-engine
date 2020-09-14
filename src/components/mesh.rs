@@ -15,14 +15,14 @@ impl Mesh {
 		let vertices = [Vertex { pos: [-0.5, -0.5].into() }, Vertex { pos: [0.5, -0.5].into() }, Vertex {
 			pos: [0.0, 0.5].into(),
 		}];
-		let vertices = [vertices.as_ptr()];
 
 		let mut vbo = 0;
 		let mut vao = 0;
 		unsafe {
-			ctx.gl.CreateBuffers(1, &mut vbo);
 			let size = (size_of::<Vertex>() * vertices.len()) as _;
-			ctx.gl.NamedBufferData(vbo, size, vertices.as_ptr() as _, gl::STATIC_DRAW);
+
+			ctx.gl.CreateBuffers(1, &mut vbo);
+			ctx.gl.NamedBufferData(vbo, size, [vertices.as_ptr()].as_ptr() as _, gl::STATIC_DRAW);
 
 			ctx.gl.CreateVertexArrays(1, &mut vao);
 			ctx.gl.EnableVertexArrayAttrib(vao, 0);
