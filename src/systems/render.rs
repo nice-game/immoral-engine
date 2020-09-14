@@ -75,10 +75,10 @@ unsafe fn check_shader(ctx: &Ctx, shader: GLuint) {
 
 unsafe fn check_program(ctx: &Ctx, program: GLuint) {
 	let mut success = -1;
-	ctx.gl.GetShaderiv(program, gl::LINK_STATUS, &mut success);
+	ctx.gl.GetProgramiv(program, gl::LINK_STATUS, &mut success);
 	if success == 0 {
 		let mut len = 0;
-		ctx.gl.GetShaderiv(program, gl::INFO_LOG_LENGTH, &mut len);
+		ctx.gl.GetProgramiv(program, gl::INFO_LOG_LENGTH, &mut len);
 		let mut info_log: String = repeat('\0').take(len as _).collect();
 		ctx.gl.GetShaderInfoLog(program, 512, ptr::null_mut(), info_log.as_mut_ptr() as _);
 		panic!("{:?}", info_log);
