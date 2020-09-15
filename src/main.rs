@@ -1,7 +1,8 @@
 mod components;
+mod glrs;
 mod systems;
 
-use crate::{components::mesh::Mesh, systems::render::Render};
+use crate::{components::mesh::Mesh, glrs::alloc::Allocator, systems::render::Render};
 use gl::Gl;
 use glutin::{
 	event::{Event, KeyboardInput, VirtualKeyCode, WindowEvent},
@@ -15,10 +16,11 @@ use std::sync::Arc;
 fn main() {
 	let event_loop = EventLoop::new();
 	let ctx = Ctx::new(&event_loop);
+	let alloc = unsafe { Allocator::new(&ctx) };
 
 	let mut world = World::new();
 	world.register::<Mesh>();
-	world.create_entity().with(Mesh::new(&ctx)).build();
+	world.create_entity().with(Mesh::new(&alloc)).build();
 
 	let mut dispatcher = DispatcherBuilder::new().with_thread_local(Render::new(&ctx)).build();
 	dispatcher.setup(&mut world);

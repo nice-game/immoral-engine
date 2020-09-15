@@ -13,3 +13,4 @@ gl = { path = "lib/gl" }
 glutin = "0.24.1"
 nalgebra = "0.22.0"
 specs = { version = "0.16.1", features = ["specs-derive"] }
+# typenum = "1.12.0"

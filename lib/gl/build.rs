@@ -7,9 +7,12 @@ fn main() {
 	let dest = env::var("OUT_DIR").unwrap();
 	let mut file = File::create(&Path::new(&dest).join("gl_bindings.rs")).unwrap();
 
-	Registry::new(Api::Gl, (4, 3), Profile::Core, Fallbacks::All, ["GL_ARB_direct_state_access"])
-		.write_bindings(DebugStructGenerator, &mut file)
-		.unwrap();
+	Registry::new(Api::Gl, (4, 3), Profile::Core, Fallbacks::All, [
+		"GL_ARB_buffer_storage",
+		"GL_ARB_direct_state_access",
+	])
+	.write_bindings(DebugStructGenerator, &mut file)
+	.unwrap();
 }
 
 // copyright notice applies to code below this point
@@ -281,7 +284,7 @@ where
 				map.insert(0x8031, "GL_TABLE_TOO_LARGE1");
 				let mut stouf1 = std::string::String::new();
 				let mut stouf2 = "".to_owned();
-				for (asdf,fdsa) in &map {
+				for (asdf, fdsa) in &map {
 					stouf1 += &format!("if r=={0} {{\"{1}\".to_owned()}} else {{", asdf, fdsa);
 					stouf2 += "}";
 				}
