@@ -1,6 +1,5 @@
 use nalgebra::{one, zero, UnitQuaternion, Vector3};
 
-#[repr(C)]
 pub struct Camera {
 	pub uniform: CameraUniform,
 	pub yaw: f32,
@@ -24,7 +23,8 @@ impl Camera {
 	}
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
+#[repr(C)]
 pub struct CameraUniform {
 	pub rot: UnitQuaternion<f32>,
 	pub pos: Vector3<f32>,

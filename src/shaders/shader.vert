@@ -7,6 +7,11 @@ layout (std140, binding = 0) uniform Camera {
 	vec3 pos;
 } cam;
 
+vec3 quat_mul(vec4 quat, vec3 vec) {
+	return cross(quat.xyz, cross(quat.xyz, vec) + vec * quat.w) * 2.0 + vec;
+}
+
 void main() {
-	gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+	vec3 pos = quat_mul(cam.rot, aPos) - cam.pos;
+	gl_Position = vec4(pos, 1.0);
 }

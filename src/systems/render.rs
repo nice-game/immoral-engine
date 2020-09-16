@@ -4,6 +4,7 @@ use crate::{
 	types::camera::{Camera, CameraUniform},
 };
 use gl::{types::GLuint, Gl};
+use nalgebra::Vector3;
 use specs::{prelude::*, System};
 use std::{ffi::CString, iter::repeat, mem::size_of, ptr, sync::Arc};
 
@@ -49,9 +50,9 @@ impl Render {
 			gl.DeleteShader(vshader);
 
 			let camidx = gl.GetUniformBlockIndex(shader, "Camera\0".as_ptr() as _);
-			// gl.UniformBlockBinding(shader, camidx, 0);
 
-			let cam = Camera::new();
+			let mut cam = Camera::new();
+			cam.uniform.pos = Vector3::new(0.0, -5.0, 0.0);
 			let cambuf = Buffer::init(alloc).copy(&cam.uniform);
 
 			Self { alloc: alloc.clone(), vao, shader, cam, cambuf, camidx }
