@@ -9,6 +9,7 @@ use std::{ffi::CString, iter::repeat, mem::size_of, ptr, sync::Arc};
 
 pub struct Render {
 	alloc: Arc<Allocator>,
+	vao: GLuint,
 	shader: GLuint,
 	cam: Camera,
 	cambuf: Buffer<CameraUniform>,
@@ -19,7 +20,13 @@ impl Render {
 		let ctx = &alloc.ctx;
 		let gl = &ctx.gl;
 
+		let mut vao = 0;
 		unsafe {
+			gl.CreateVertexArrays(1, &mut vao);
+			gl.EnableVertexArrayAttrib(vao, 0);
+			gl.VertexArrayAttribFormat(vao, 0, 2, gl::FLOAT, gl::FALSE, 0);
+			gl.VertexArrayAttribBinding(vao, 0, 0);
+
 			let src = CString::new(include_str!("../shaders/shader.vert")).unwrap();
 			let vshader = gl.CreateShader(gl::VERTEX_SHADER);
 			gl.ShaderSource(vshader, 1, [src.as_ptr()].as_ptr(), ptr::null());
@@ -47,7 +54,7 @@ impl Render {
 			let cam = Camera::new();
 			let cambuf = Buffer::init(alloc).copy(&cam.uniform);
 
-			Self { alloc: alloc.clone(), shader, cam, cambuf, camidx }
+			Self { alloc: alloc.clone(), vao, shader, cam, cambuf, camidx }
 		}
 	}
 }
@@ -67,8 +74,9 @@ impl<'a> System<'a> for Render {
 				self.cambuf.offset(),
 				size_of::<CameraUniform>() as _,
 			);
+			gl.BindVertexArray(self.vao);
 			for mesh in meshes.join() {
-				gl.BindVertexArray(mesh.vao);
+				mesh.bind(self.vao);
 				gl.DrawArrays(gl::TRIANGLES, 0, 3);
 			}
 		}

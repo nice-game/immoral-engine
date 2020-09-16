@@ -4,7 +4,7 @@ use std::{marker::PhantomData, mem::size_of, slice, sync::Arc};
 
 pub struct Buffer<T: ?Sized> {
 	// TODO: gpu sync
-	mem: Allocation,
+	pub mem: Allocation,
 	phantom: PhantomData<T>,
 }
 impl<T> Buffer<T> {

@@ -6,8 +6,7 @@ use std::{mem::size_of, sync::Arc};
 
 #[derive(Component)]
 pub struct Mesh {
-	_buf: Buffer<[Vertex]>,
-	pub vao: GLuint,
+	buf: Buffer<[Vertex]>,
 }
 impl Mesh {
 	pub fn new(alloc: &Arc<Allocator>) -> Self {
@@ -17,22 +16,17 @@ impl Mesh {
 
 		let buf = Buffer::init_slice(alloc, vertices.len()).copy_from_slice(&vertices);
 
-		let mut vao = 0;
-		unsafe {
-			// let size = (size_of::<Vertex>() * vertices.len()) as _;
+		Self { buf }
+	}
 
-			// ctx.gl.CreateBuffers(1, &mut vbo);
-			// ctx.gl.NamedBufferData(vbo, size, vertices.as_ptr() as _, gl::STATIC_DRAW);
-
-			let gl = &alloc.ctx.gl;
-			gl.CreateVertexArrays(1, &mut vao);
-			gl.EnableVertexArrayAttrib(vao, 0);
-			gl.VertexArrayAttribFormat(vao, 0, 2, gl::FLOAT, gl::FALSE, 0);
-			gl.VertexArrayAttribBinding(vao, 0, 0);
-			gl.VertexArrayVertexBuffer(vao, 0, buf.vbo(), buf.offset(), size_of::<Vertex>() as _);
-		}
-
-		Self { _buf: buf, vao }
+	pub unsafe fn bind(&self, vao: GLuint) {
+		self.buf.mem.alloc.ctx.gl.VertexArrayVertexBuffer(
+			vao,
+			0,
+			self.buf.vbo(),
+			self.buf.offset(),
+			size_of::<Vertex>() as _,
+		);
 	}
 }
 
