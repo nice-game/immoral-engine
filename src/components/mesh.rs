@@ -6,7 +6,7 @@ use std::{mem::size_of, sync::Arc};
 
 #[derive(Component)]
 pub struct Mesh {
-	_buf: Arc<Buffer<[Vertex]>>,
+	_buf: Buffer<[Vertex]>,
 	pub vao: GLuint,
 }
 impl Mesh {

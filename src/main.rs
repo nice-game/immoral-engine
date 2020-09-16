@@ -1,6 +1,7 @@
 mod components;
 mod glrs;
 mod systems;
+mod types;
 
 use crate::{components::mesh::Mesh, glrs::alloc::Allocator, systems::render::Render};
 use gl::Gl;
@@ -22,7 +23,7 @@ fn main() {
 	world.register::<Mesh>();
 	world.create_entity().with(Mesh::new(&alloc)).build();
 
-	let mut dispatcher = DispatcherBuilder::new().with_thread_local(Render::new(&ctx)).build();
+	let mut dispatcher = DispatcherBuilder::new().with_thread_local(Render::new(&alloc)).build();
 	dispatcher.setup(&mut world);
 
 	unsafe { ctx.gl.ClearColor(0.1, 0.1, 0.1, 1.0) };

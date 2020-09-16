@@ -12,6 +12,7 @@ pub struct Allocator {
 	pub ctx: Arc<Ctx>,
 	pub vbo: GLuint,
 	buf: &'static [u8],
+	align: usize,
 	free: AtomicUsize,
 }
 impl Allocator {
@@ -31,13 +32,19 @@ impl Allocator {
 			ctx.gl.MapNamedBufferRange(vbo, 0, size, gl::MAP_WRITE_BIT | gl::MAP_PERSISTENT_BIT | gl::MAP_COHERENT_BIT);
 		let buf = slice::from_raw_parts(buf as *mut u8, size as _);
 
-		Arc::new(Self { ctx: ctx.clone(), vbo, buf, free: AtomicUsize::new(0) })
+		let mut align = 0;
+		ctx.gl.GetIntegerv(gl::UNIFORM_BUFFER_OFFSET_ALIGNMENT, &mut align);
+
+		Arc::new(Self { ctx: ctx.clone(), vbo, buf, align: align as _, free: AtomicUsize::new(0) })
 	}
 
 	pub fn alloc(self: &Arc<Self>, size: usize) -> Allocation {
-		let offset = self.free.fetch_add(size, Ordering::Relaxed);
-		if offset + size > self.buf.len() {}
+		let offset = self.free.fetch_add(self.round_up(size), Ordering::Relaxed);
 		Allocation { alloc: self.clone(), offset, size }
+	}
+
+	fn round_up(&self, n: usize) -> usize {
+		(n + self.align - 1) / self.align * self.align
 	}
 }
 
