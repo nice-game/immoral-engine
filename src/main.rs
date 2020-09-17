@@ -3,7 +3,11 @@ mod glrs;
 mod systems;
 mod types;
 
-use crate::{components::mesh::Mesh, glrs::alloc::Allocator, systems::render::Render};
+use crate::{
+	components::mesh::Mesh,
+	glrs::alloc::Allocator,
+	systems::render::{allocs::RenderAllocs, Render},
+};
 use gl::Gl;
 use glutin::{
 	event::{Event, KeyboardInput, VirtualKeyCode, WindowEvent},
@@ -17,13 +21,13 @@ use std::sync::Arc;
 fn main() {
 	let event_loop = EventLoop::new();
 	let ctx = Ctx::new(&event_loop);
-	let alloc = unsafe { Allocator::new(&ctx) };
+	let allocs = RenderAllocs::new(&ctx);
 
 	let mut world = World::new();
 	world.register::<Mesh>();
-	world.create_entity().with(Mesh::new(&alloc)).build();
+	world.create_entity().with(Mesh::new(&allocs)).build();
 
-	let mut dispatcher = DispatcherBuilder::new().with_thread_local(Render::new(&alloc)).build();
+	let mut dispatcher = DispatcherBuilder::new().with_thread_local(Render::new(&allocs)).build();
 	dispatcher.setup(&mut world);
 
 	unsafe { ctx.gl.ClearColor(0.1, 0.1, 0.1, 1.0) };

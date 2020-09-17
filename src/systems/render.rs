@@ -1,7 +1,10 @@
+pub mod allocs;
+
 use crate::{
-	components::mesh::Mesh,
-	glrs::{alloc::Allocator, buffer::Buffer},
+	components::mesh::{Mesh, Vertex},
+	glrs::buffer::Buffer,
 	types::camera::{Camera, CameraUniform},
+	RenderAllocs,
 };
 use gl::{types::GLuint, Gl};
 use nalgebra::Vector3;
@@ -9,7 +12,7 @@ use specs::{prelude::*, System};
 use std::{ffi::CString, iter::repeat, mem::size_of, ptr, sync::Arc};
 
 pub struct Render {
-	alloc: Arc<Allocator>,
+	allocs: Arc<RenderAllocs>,
 	vao: GLuint,
 	shader: GLuint,
 	cam: Camera,
@@ -17,8 +20,8 @@ pub struct Render {
 	camidx: GLuint,
 }
 impl Render {
-	pub fn new(alloc: &Arc<Allocator>) -> Self {
-		let ctx = &alloc.ctx;
+	pub fn new(allocs: &Arc<RenderAllocs>) -> Self {
+		let ctx = allocs.ctx();
 		let gl = &ctx.gl;
 
 		let mut vao = 0;
@@ -27,6 +30,7 @@ impl Render {
 			gl.EnableVertexArrayAttrib(vao, 0);
 			gl.VertexArrayAttribFormat(vao, 0, 2, gl::FLOAT, gl::FALSE, 0);
 			gl.VertexArrayAttribBinding(vao, 0, 0);
+			gl.VertexArrayVertexBuffer(vao, 0, allocs.vert_alloc.id, 0, size_of::<Vertex>() as _);
 
 			let src = CString::new(include_str!("../shaders/shader.vert")).unwrap();
 			let vshader = gl.CreateShader(gl::VERTEX_SHADER);
@@ -53,9 +57,9 @@ impl Render {
 
 			let mut cam = Camera::new();
 			cam.uniform.pos = Vector3::new(0.0, -5.0, 0.0);
-			let cambuf = Buffer::init(alloc).copy(&cam.uniform);
+			let cambuf = allocs.alloc_other(&cam.uniform);
 
-			Self { alloc: alloc.clone(), vao, shader, cam, cambuf, camidx }
+			Self { allocs: allocs.clone(), vao, shader, cam, cambuf, camidx }
 		}
 	}
 }
@@ -65,20 +69,20 @@ impl<'a> System<'a> for Render {
 	fn run(&mut self, meshes: Self::SystemData) {
 		self.cambuf.copy(&self.cam.uniform);
 
-		let gl = &self.alloc.ctx.gl;
+		let gl = &self.allocs.ctx().gl;
 		unsafe {
 			gl.UseProgram(self.shader);
+			gl.BindVertexArray(self.vao);
+			// does this need to be bound every frame?
 			gl.BindBufferRange(
 				gl::UNIFORM_BUFFER,
 				self.camidx,
-				self.alloc.vbo,
+				self.allocs.vert_alloc.id,
 				self.cambuf.offset(),
 				size_of::<CameraUniform>() as _,
 			);
-			gl.BindVertexArray(self.vao);
 			for mesh in meshes.join() {
-				mesh.bind(self.vao);
-				gl.DrawArrays(gl::TRIANGLES, 0, 3);
+				gl.DrawArrays(gl::TRIANGLES, mesh.first() as _, 3);
 			}
 		}
 	}

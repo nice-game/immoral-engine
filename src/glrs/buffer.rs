@@ -1,5 +1,4 @@
 use crate::glrs::alloc::{Allocation, Allocator};
-use gl::types::GLuint;
 use std::{marker::PhantomData, mem::size_of, slice, sync::Arc};
 
 pub struct Buffer<T: ?Sized> {
@@ -24,10 +23,6 @@ impl<T: Copy + 'static> Buffer<[T]> {
 	}
 }
 impl<T: ?Sized> Buffer<T> {
-	pub fn vbo(&self) -> GLuint {
-		self.mem.alloc.vbo
-	}
-
 	pub fn offset(&self) -> isize {
 		self.mem.offset as _
 	}

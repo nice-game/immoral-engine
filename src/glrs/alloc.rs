@@ -10,7 +10,7 @@ use std::{
 
 pub struct Allocator {
 	pub ctx: Arc<Ctx>,
-	pub vbo: GLuint,
+	pub id: GLuint,
 	buf: &'static [u8],
 	align: usize,
 	free: AtomicUsize,
@@ -19,23 +19,23 @@ impl Allocator {
 	pub unsafe fn new(ctx: &Arc<Ctx>) -> Arc<Self> {
 		let size = 32 * 1024 * 1024;
 
-		let mut vbo = !0;
-		ctx.gl.CreateBuffers(1, &mut vbo);
+		let mut id = !0;
+		ctx.gl.CreateBuffers(1, &mut id);
 		ctx.gl.NamedBufferStorage(
-			vbo,
+			id,
 			size,
 			ptr::null(),
 			gl::MAP_WRITE_BIT | gl::MAP_PERSISTENT_BIT | gl::MAP_COHERENT_BIT,
 		);
 
 		let buf =
-			ctx.gl.MapNamedBufferRange(vbo, 0, size, gl::MAP_WRITE_BIT | gl::MAP_PERSISTENT_BIT | gl::MAP_COHERENT_BIT);
+			ctx.gl.MapNamedBufferRange(id, 0, size, gl::MAP_WRITE_BIT | gl::MAP_PERSISTENT_BIT | gl::MAP_COHERENT_BIT);
 		let buf = slice::from_raw_parts(buf as *mut u8, size as _);
 
 		let mut align = 0;
 		ctx.gl.GetIntegerv(gl::UNIFORM_BUFFER_OFFSET_ALIGNMENT, &mut align);
 
-		Arc::new(Self { ctx: ctx.clone(), vbo, buf, align: align as _, free: AtomicUsize::new(0) })
+		Arc::new(Self { ctx: ctx.clone(), id, buf, align: align as _, free: AtomicUsize::new(0) })
 	}
 
 	pub fn alloc(self: &Arc<Self>, size: usize) -> Allocation {

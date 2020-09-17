@@ -1,5 +1,5 @@
-use crate::{glrs::buffer::Buffer, Allocator};
-use gl::types::GLuint;
+use crate::{glrs::buffer::Buffer, systems::render::allocs::RenderAllocs};
+use gl::types::GLint;
 use nalgebra::Vector2;
 use specs::{prelude::*, Component};
 use std::{mem::size_of, sync::Arc};
@@ -9,24 +9,18 @@ pub struct Mesh {
 	buf: Buffer<[Vertex]>,
 }
 impl Mesh {
-	pub fn new(alloc: &Arc<Allocator>) -> Self {
+	pub fn new(alloc: &Arc<RenderAllocs>) -> Self {
 		let vertices = [Vertex { pos: [-0.5, -0.5].into() }, Vertex { pos: [0.5, -0.5].into() }, Vertex {
 			pos: [0.0, 0.5].into(),
 		}];
 
-		let buf = Buffer::init_slice(alloc, vertices.len()).copy_from_slice(&vertices);
+		let buf = alloc.alloc_verts(&vertices);
 
 		Self { buf }
 	}
 
-	pub unsafe fn bind(&self, vao: GLuint) {
-		self.buf.mem.alloc.ctx.gl.VertexArrayVertexBuffer(
-			vao,
-			0,
-			self.buf.vbo(),
-			self.buf.offset(),
-			size_of::<Vertex>() as _,
-		);
+	pub fn first(&self) -> GLint {
+		(self.buf.mem.offset / size_of::<Vertex>()) as _
 	}
 }
 

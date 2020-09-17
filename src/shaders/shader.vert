@@ -12,6 +12,6 @@ vec3 quat_mul(vec4 quat, vec3 vec) {
 }
 
 void main() {
-	vec3 pos = quat_mul(cam.rot, aPos) - cam.pos;
-	gl_Position = vec4(pos, 1.0);
+	// vec3 pos = quat_mul(cam.rot, aPos) - cam.pos;
+	gl_Position = vec4(aPos, 1.0);
 }
