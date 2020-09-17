@@ -6,21 +6,24 @@ use std::{mem::size_of, sync::Arc};
 
 #[derive(Component)]
 pub struct Mesh {
-	buf: Buffer<[Vertex]>,
+	_buf: Buffer<[Vertex]>,
+	indices: Buffer<[u16]>,
 }
 impl Mesh {
 	pub fn new(alloc: &Arc<RenderAllocs>) -> Self {
 		let vertices = [Vertex { pos: [-0.5, -0.5].into() }, Vertex { pos: [0.5, -0.5].into() }, Vertex {
 			pos: [0.0, 0.5].into(),
 		}];
+		let indices = [0, 1, 2];
 
 		let buf = alloc.alloc_verts(&vertices);
+		let indices = alloc.alloc_indices(&indices);
 
-		Self { buf }
+		Self { _buf: buf, indices }
 	}
 
 	pub fn first(&self) -> GLint {
-		(self.buf.mem.offset / size_of::<Vertex>()) as _
+		(self.indices.mem.offset / size_of::<u16>()) as _
 	}
 }
 

@@ -12,14 +12,18 @@ pub struct RenderAllocs {
 impl RenderAllocs {
 	pub fn new(ctx: &Arc<Ctx>) -> Arc<Self> {
 		Arc::new(Self {
-			vert_alloc: unsafe { Allocator::new(ctx) },
-			idx_alloc: unsafe { Allocator::new(ctx) },
-			other_alloc: unsafe { Allocator::new(ctx) },
+			vert_alloc: Allocator::new(ctx, true),
+			idx_alloc: Allocator::new(ctx, true),
+			other_alloc: Allocator::new(ctx, false),
 		})
 	}
 
 	pub fn alloc_verts(&self, vertices: &[Vertex]) -> Buffer<[Vertex]> {
 		Buffer::init_slice(&self.vert_alloc, vertices.len()).copy_from_slice(&vertices)
+	}
+
+	pub fn alloc_indices(&self, indices: &[u16]) -> Buffer<[u16]> {
+		Buffer::init_slice(&self.idx_alloc, indices.len()).copy_from_slice(&indices)
 	}
 
 	pub fn alloc_other<T: Copy + 'static>(&self, data: &T) -> Buffer<T> {

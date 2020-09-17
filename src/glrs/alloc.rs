@@ -16,24 +16,33 @@ pub struct Allocator {
 	free: AtomicUsize,
 }
 impl Allocator {
-	pub unsafe fn new(ctx: &Arc<Ctx>) -> Arc<Self> {
+	pub fn new(ctx: &Arc<Ctx>, pack: bool) -> Arc<Self> {
 		let size = 32 * 1024 * 1024;
 
 		let mut id = !0;
-		ctx.gl.CreateBuffers(1, &mut id);
-		ctx.gl.NamedBufferStorage(
-			id,
-			size,
-			ptr::null(),
-			gl::MAP_WRITE_BIT | gl::MAP_PERSISTENT_BIT | gl::MAP_COHERENT_BIT,
-		);
+		let mut align = 1;
+		let buf;
+		unsafe {
+			ctx.gl.CreateBuffers(1, &mut id);
+			ctx.gl.NamedBufferStorage(
+				id,
+				size,
+				ptr::null(),
+				gl::MAP_WRITE_BIT | gl::MAP_PERSISTENT_BIT | gl::MAP_COHERENT_BIT,
+			);
 
-		let buf =
-			ctx.gl.MapNamedBufferRange(id, 0, size, gl::MAP_WRITE_BIT | gl::MAP_PERSISTENT_BIT | gl::MAP_COHERENT_BIT);
-		let buf = slice::from_raw_parts(buf as *mut u8, size as _);
+			let bufptr = ctx.gl.MapNamedBufferRange(
+				id,
+				0,
+				size,
+				gl::MAP_WRITE_BIT | gl::MAP_PERSISTENT_BIT | gl::MAP_COHERENT_BIT,
+			);
+			buf = slice::from_raw_parts(bufptr as *mut u8, size as _);
 
-		let mut align = 0;
-		ctx.gl.GetIntegerv(gl::UNIFORM_BUFFER_OFFSET_ALIGNMENT, &mut align);
+			if !pack {
+				ctx.gl.GetIntegerv(gl::UNIFORM_BUFFER_OFFSET_ALIGNMENT, &mut align);
+			}
+		}
 
 		Arc::new(Self { ctx: ctx.clone(), id, buf, align: align as _, free: AtomicUsize::new(0) })
 	}

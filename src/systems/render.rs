@@ -31,6 +31,7 @@ impl Render {
 			gl.VertexArrayAttribFormat(vao, 0, 2, gl::FLOAT, gl::FALSE, 0);
 			gl.VertexArrayAttribBinding(vao, 0, 0);
 			gl.VertexArrayVertexBuffer(vao, 0, allocs.vert_alloc.id, 0, size_of::<Vertex>() as _);
+			gl.VertexArrayElementBuffer(vao, allocs.idx_alloc.id);
 
 			let src = CString::new(include_str!("../shaders/shader.vert")).unwrap();
 			let vshader = gl.CreateShader(gl::VERTEX_SHADER);
