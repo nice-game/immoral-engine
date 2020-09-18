@@ -60,7 +60,7 @@ impl Allocator {
 pub struct Allocation {
 	pub alloc: Arc<Allocator>,
 	pub offset: usize,
-	size: usize,
+	pub size: usize,
 }
 impl Allocation {
 	pub fn buf_mut(&mut self) -> &mut [u8] {

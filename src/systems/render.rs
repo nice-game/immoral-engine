@@ -1,7 +1,7 @@
 pub mod allocs;
 
 use crate::{
-	components::mesh::{Mesh, Vertex},
+	components::model::{Model, Vertex},
 	glrs::buffer::Buffer,
 	types::camera::{Camera, CameraUniform},
 	RenderAllocs,
@@ -65,9 +65,9 @@ impl Render {
 	}
 }
 impl<'a> System<'a> for Render {
-	type SystemData = ReadStorage<'a, Mesh>;
+	type SystemData = ReadStorage<'a, Model>;
 
-	fn run(&mut self, meshes: Self::SystemData) {
+	fn run(&mut self, models: Self::SystemData) {
 		self.cambuf.copy(&self.cam.uniform);
 
 		let gl = &self.allocs.ctx().gl;
@@ -82,8 +82,15 @@ impl<'a> System<'a> for Render {
 				self.cambuf.offset(),
 				size_of::<CameraUniform>() as _,
 			);
-			for mesh in meshes.join() {
-				gl.DrawArrays(gl::TRIANGLES, mesh.first() as _, 3);
+			for model in models.join() {
+				for mesh in &model.meshes {
+					gl.DrawElements(
+						gl::TRIANGLES,
+						mesh.index_count() as _,
+						gl::UNSIGNED_SHORT,
+						mesh.index_offset() as _,
+					);
+				}
 			}
 		}
 	}

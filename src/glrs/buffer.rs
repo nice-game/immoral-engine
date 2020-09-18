@@ -21,6 +21,10 @@ impl<T: Copy + 'static> Buffer<[T]> {
 		let mem = alloc.alloc(size_of::<T>() * len);
 		BufferInit { buf: Self { mem, phantom: PhantomData } }
 	}
+
+	pub fn len(&self) -> usize {
+		self.mem.size / size_of::<T>()
+	}
 }
 impl<T: ?Sized> Buffer<T> {
 	pub fn offset(&self) -> isize {
