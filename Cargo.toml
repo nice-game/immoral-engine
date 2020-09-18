@@ -9,6 +9,7 @@ members = ["lib/gl"]
 
 [dependencies]
 array-init = "0.1.1"
+assimp = "0.3.1"
 gl = { path = "lib/gl" }
 glutin = "0.24.1"
 nalgebra = "0.22.0"

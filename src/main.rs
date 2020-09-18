@@ -4,7 +4,7 @@ mod systems;
 mod types;
 
 use crate::{
-	components::mesh::Mesh,
+	components::model::Model,
 	glrs::alloc::Allocator,
 	systems::render::{allocs::RenderAllocs, Render},
 };
@@ -24,8 +24,8 @@ fn main() {
 	let allocs = RenderAllocs::new(&ctx);
 
 	let mut world = World::new();
-	world.register::<Mesh>();
-	world.create_entity().with(Mesh::new(&allocs)).build();
+	world.register::<Model>();
+	world.create_entity().with(Model::from_file(&allocs, "assets/bladman.dae")).build();
 
 	let mut dispatcher = DispatcherBuilder::new().with_thread_local(Render::new(&allocs)).build();
 	dispatcher.setup(&mut world);
