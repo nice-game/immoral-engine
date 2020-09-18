@@ -1,3 +1,5 @@
+extern crate libz_sys;
+
 mod components;
 mod glrs;
 mod systems;
@@ -25,7 +27,7 @@ fn main() {
 
 	let mut world = World::new();
 	world.register::<Model>();
-	world.create_entity().with(Model::from_file(&allocs, "assets/bladman.dae")).build();
+	world.create_entity().with(Model::from_file(&allocs, "assets/baldman.dae")).build();
 
 	let mut dispatcher = DispatcherBuilder::new().with_thread_local(Render::new(&allocs)).build();
 	dispatcher.setup(&mut world);

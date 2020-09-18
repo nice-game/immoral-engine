@@ -11,7 +11,9 @@ pub struct Model {
 }
 impl Model {
 	pub fn from_file(alloc: &Arc<RenderAllocs>, file: &str) -> Self {
-		let scene = Importer::new().read_file(file).unwrap();
+		let mut importer = Importer::new();
+		importer.triangulate(true);
+		let scene = importer.read_file(file).unwrap();
 		let meshes = scene.mesh_iter().map(|mesh| Mesh::from_assimp(alloc, &mesh)).collect();
 		Self { meshes }
 	}
@@ -24,8 +26,14 @@ pub struct Mesh {
 impl Mesh {
 	fn from_assimp(alloc: &Arc<RenderAllocs>, mesh: &AssimpMesh) -> Self {
 		let vertices: Vec<_> = mesh.vertex_iter().map(|v| Vertex { pos: [v.x, v.y, v.z].into() }).collect();
-		let indices: Vec<_> =
-			mesh.face_iter().map(|f| (0..f.num_indices).map(move |i| f[i as _] as _)).flatten().collect();
+		let indices: Vec<_> = mesh
+			.face_iter()
+			.map(|f| {
+				assert_eq!(f.num_indices, 3);
+				(0..f.num_indices).map(move |i| f[i as _] as _)
+			})
+			.flatten()
+			.collect();
 
 		let buf = alloc.alloc_verts(&vertices);
 		let indices = alloc.alloc_indices(&indices);
@@ -33,8 +41,12 @@ impl Mesh {
 		Self { _buf: buf, indices }
 	}
 
-	pub fn first(&self) -> GLint {
+	pub fn index_offset(&self) -> GLint {
 		(self.indices.mem.offset / size_of::<u16>()) as _
+	}
+
+	pub fn index_count(&self) -> usize {
+		self.indices.len()
 	}
 }
 

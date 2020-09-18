@@ -9,9 +9,10 @@ members = ["lib/gl"]
 
 [dependencies]
 array-init = "0.1.1"
-assimp = "0.3.1"
+assimp = { path = "lib/assimp" } # "0.3.1"
 gl = { path = "lib/gl" }
 glutin = "0.24.1"
 nalgebra = "0.22.0"
 specs = { version = "0.16.1", features = ["specs-derive"] }
+libz-sys = { version = "1.1.2", features = ["static"] }
 # typenum = "1.12.0"

@@ -84,7 +84,12 @@ impl<'a> System<'a> for Render {
 			);
 			for model in models.join() {
 				for mesh in &model.meshes {
-					gl.DrawArrays(gl::TRIANGLES, mesh.first() as _, 3);
+					gl.DrawElements(
+						gl::TRIANGLES,
+						mesh.index_count() as _,
+						gl::UNSIGNED_SHORT,
+						mesh.index_offset() as _,
+					);
 				}
 			}
 		}
