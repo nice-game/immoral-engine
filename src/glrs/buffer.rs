@@ -58,7 +58,7 @@ impl<T> Deref for Buffer<[T]> {
 }
 impl<T> DerefMut for Buffer<[T]> {
 	fn deref_mut(&mut self) -> &mut Self::Target {
-		unsafe { slice::from_raw_parts_mut(self.mem.buf().as_mut_ptr() as _, self.len()) }
+		unsafe { slice::from_raw_parts_mut(self.mem.buf_mut().as_mut_ptr() as _, self.len()) }
 	}
 }
 

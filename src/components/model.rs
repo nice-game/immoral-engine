@@ -1,7 +1,7 @@
 use crate::{glrs::buffer::Buffer, systems::render::allocs::RenderAllocs};
 use assimp::{Importer, Mesh as AssimpMesh};
 use gl::types::GLint;
-use nalgebra::Vector3;
+use nalgebra::{Vector3, Vector4, UnitQuaternion};
 use specs::{prelude::*, Component};
 use std::{mem::size_of, sync::Arc};
 
@@ -28,7 +28,7 @@ impl Mesh {
 		let vertices: Vec<_> = mesh.vertex_iter().map(|v| Vertex {
 			pos: [v.x, v.y, v.z].into(),
 			rot: UnitQuaternion::identity(),
-			uvw: zero()
+			uvw: [0.0,0.0,0.0,0.0].into(),
 		}).collect();
 		let indices: Vec<_> = mesh
 			.face_iter()
@@ -58,7 +58,7 @@ impl Mesh {
 pub struct Vertex {
 	#[allow(unused)]
 	pos: Vector3<f32>,
-	rot: Vector4<f32>,
+	rot: UnitQuaternion<f32>,
 	uvw: Vector4<f32>,
 }
 

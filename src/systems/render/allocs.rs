@@ -30,6 +30,10 @@ impl RenderAllocs {
 		Buffer::init(&self.other_alloc).copy(&data)
 	}
 
+	pub fn alloc_other_slice<T: Copy + 'static>(&self, data: &[T]) -> Buffer<[T]> {
+		Buffer::init_slice(&self.other_alloc, data.len()).copy_from_slice(data)
+	}
+
 	pub fn ctx(&self) -> &Arc<Ctx> {
 		&self.vert_alloc.ctx
 	}

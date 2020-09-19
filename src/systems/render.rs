@@ -27,8 +27,8 @@ pub struct RenderSys {
 	shader: GLuint,
 	camidx: GLuint,
 	cambuf: Buffer<CameraUniform>,
-	cmdA: Buffer<RenderSys_DrawCommand>,
-	cmdB: Buffer<RenderSys_DrawCommand>,
+	cmdA: Buffer<[RenderSys_DrawCommand]>,
+	cmdB: Buffer<[RenderSys_DrawCommand]>,
 	cmd_phase: i32,
 }
 impl RenderSys {
@@ -46,9 +46,7 @@ impl RenderSys {
 				gl.VertexArrayAttribBinding(vao[i], 0, 0);
 				gl.VertexArrayVertexBuffer(vao[i], 0, allocs.vert_alloc.id, 0, size_of::<Vertex>() as _);
 				gl.VertexArrayElementBuffer(vao[i], allocs.idx_alloc.id);
-
 			}
-			gl.BindVertexArray(self.vao);
 
 			let src = CString::new(include_str!("../shaders/shader.vert")).unwrap();
 			let vshader = gl.CreateShader(gl::VERTEX_SHADER);
@@ -75,21 +73,21 @@ impl RenderSys {
 
 			let cambuf = allocs.alloc_other(&CameraUniform::default());
 
-			let cmdA = allocs.alloc_other(&RenderSys_DrawCommand::default());
-			let cmdB = allocs.alloc_other(&RenderSys_DrawCommand::default());
+			let cmdA = allocs.alloc_other_slice(&[RenderSys_DrawCommand::default(); 100][..]);
+			let cmdB = allocs.alloc_other_slice(&[RenderSys_DrawCommand::default(); 100][..]);
 			let cmd_phase = 0;
 			
 			gl.BindBufferRange(
 				gl::UNIFORM_BUFFER,
-				self.camidx,
-				self.allocs.other_alloc.id,
-				self.cambuf.offset(),
+				camidx,
+				allocs.other_alloc.id,
+				cambuf.offset(),
 				size_of::<CameraUniform>() as _,
 			);
 
 			gl.BindBuffer(
 				gl::DRAW_INDIRECT_BUFFER,
-				self.allocs.other_alloc.id,
+				allocs.other_alloc.id,
 			);
 
 			Self { allocs: allocs.clone(), vao, shader, camidx, cambuf, cmdA, cmdB, cmd_phase: 0 }
@@ -107,21 +105,24 @@ impl<'a> System<'a> for RenderSys {
 		let gl = &self.allocs.ctx().gl;
 		unsafe {
 			gl.UseProgram(self.shader);
+			gl.BindVertexArray(self.vao[1]);
 			let cmd = if self.cmd_phase == 0 {&mut self.cmdB} else {&mut self.cmdA};
+			let mut cmd_idx = 0;
 			for model in models.join() {
 				for mesh in &model.meshes {
-					cmd[0].count = mesh.index_count();
-					cmd[0].instanceCount = 0;
-					cmd[0].firstIndex = ?;
-					cmd[0].baseVertex = ?;
-					cmd[0].baseInstance = 0;
+					cmd[cmd_idx].count = mesh.index_count() as u32;
+					cmd[cmd_idx].instanceCount = 0 as u32;
+					cmd[cmd_idx].firstIndex = 0 as u32;
+					cmd[cmd_idx].baseVertex = 0 as u32;
+					cmd[cmd_idx].baseInstance = 0 as u32;
+					cmd_idx += 1
 				}
 			}
 			gl.MultiDrawElementsIndirect(
 				gl::TRIANGLES,
 				gl::UNSIGNED_SHORT,
-				(if self.cmd_phase == 0 {self.cmdA.offset()} else {self.cmdB.offset()} as _),
-				1,
+				if self.cmd_phase == 0 {self.cmdA.offset()} else {self.cmdB.offset()} as _,
+				cmd_idx as i32,
 				0,
 			);
 		}
