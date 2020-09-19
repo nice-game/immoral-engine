@@ -1,25 +1,26 @@
 pub mod allocs;
 
 use crate::{
-	components::model::{Model, Vertex},
+	components::{
+		model::{Model, Vertex},
+		player_controller::PlayerController,
+	},
 	glrs::buffer::Buffer,
-	types::camera::{Camera, CameraUniform},
+	types::camera::CameraUniform,
 	RenderAllocs,
 };
 use gl::{types::GLuint, Gl};
-use nalgebra::Vector3;
 use specs::{prelude::*, System};
 use std::{ffi::CString, iter::repeat, mem::size_of, ptr, sync::Arc};
 
-pub struct Render {
+pub struct RenderSys {
 	allocs: Arc<RenderAllocs>,
 	vao: GLuint,
 	shader: GLuint,
-	cam: Camera,
-	cambuf: Buffer<CameraUniform>,
 	camidx: GLuint,
+	cambuf: Buffer<CameraUniform>,
 }
-impl Render {
+impl RenderSys {
 	pub fn new(allocs: &Arc<RenderAllocs>) -> Self {
 		let ctx = allocs.ctx();
 		let gl = &ctx.gl;
@@ -56,19 +57,19 @@ impl Render {
 
 			let camidx = gl.GetUniformBlockIndex(shader, "Camera\0".as_ptr() as _);
 
-			let mut cam = Camera::new();
-			cam.uniform.pos = Vector3::new(0.0, -5.0, 0.0);
-			let cambuf = allocs.alloc_other(&cam.uniform);
+			let cambuf = allocs.alloc_other(&CameraUniform::default());
 
-			Self { allocs: allocs.clone(), vao, shader, cam, cambuf, camidx }
+			Self { allocs: allocs.clone(), vao, shader, cambuf, camidx }
 		}
 	}
 }
-impl<'a> System<'a> for Render {
-	type SystemData = ReadStorage<'a, Model>;
+impl<'a> System<'a> for RenderSys {
+	type SystemData = (ReadStorage<'a, PlayerController>, ReadStorage<'a, Model>);
 
-	fn run(&mut self, models: Self::SystemData) {
-		self.cambuf.copy(&self.cam.uniform);
+	fn run(&mut self, (players, models): Self::SystemData) {
+		let player = players.join().next().unwrap();
+
+		self.cambuf.copy(&player.cam.uniform);
 
 		let gl = &self.allocs.ctx().gl;
 		unsafe {

@@ -6,19 +6,22 @@ mod systems;
 mod types;
 
 use crate::{
-	components::model::Model,
+	components::{model::Model, player_controller::PlayerController},
 	glrs::alloc::Allocator,
-	systems::render::{allocs::RenderAllocs, Render},
+	systems::{
+		player::PlayerSys,
+		render::{allocs::RenderAllocs, RenderSys},
+	},
 };
 use gl::Gl;
 use glutin::{
-	event::{Event, KeyboardInput, VirtualKeyCode, WindowEvent},
+	event::{DeviceEvent, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
 	event_loop::{ControlFlow, EventLoop},
 	window::{Window, WindowBuilder},
 	ContextBuilder, ContextWrapper, PossiblyCurrent,
 };
 use specs::prelude::*;
-use std::sync::Arc;
+use std::{collections::VecDeque, sync::Arc};
 
 fn main() {
 	let event_loop = EventLoop::new();
@@ -26,10 +29,14 @@ fn main() {
 	let allocs = RenderAllocs::new(&ctx);
 
 	let mut world = World::new();
+	world.insert(VecDeque::<DeviceEvent>::new());
 	world.register::<Model>();
+	world.register::<PlayerController>();
+	world.create_entity().with(PlayerController::new()).build();
 	world.create_entity().with(Model::from_file(&allocs, "assets/baldman.dae")).build();
 
-	let mut dispatcher = DispatcherBuilder::new().with_thread_local(Render::new(&allocs)).build();
+	let mut dispatcher =
+		DispatcherBuilder::new().with(PlayerSys, "", &[]).with_thread_local(RenderSys::new(&allocs)).build();
 	dispatcher.setup(&mut world);
 
 	unsafe { ctx.gl.ClearColor(0.1, 0.1, 0.1, 1.0) };
@@ -43,6 +50,9 @@ fn main() {
 		unsafe { ctx.gl.Flush() };
 		ctx.window.swap_buffers().unwrap();
 
+		let input = world.get_mut::<VecDeque<DeviceEvent>>().unwrap();
+		input.clear();
+
 		match event {
 			Event::WindowEvent { event, .. } => match event {
 				WindowEvent::CloseRequested => *control = ControlFlow::Exit,
@@ -55,6 +65,7 @@ fn main() {
 				WindowEvent::Resized(physical_size) => ctx.window.resize(physical_size),
 				_ => (),
 			},
+			Event::DeviceEvent { event, .. } => input.push_back(event),
 			_ => (),
 		};
 	});

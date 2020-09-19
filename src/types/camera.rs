@@ -23,7 +23,7 @@ impl Camera {
 	}
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 #[repr(C)]
 pub struct CameraUniform {
 	pub rot: UnitQuaternion<f32>,
