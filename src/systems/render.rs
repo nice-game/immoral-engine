@@ -79,7 +79,7 @@ impl<'a> System<'a> for RenderSys {
 			gl.BindBufferRange(
 				gl::UNIFORM_BUFFER,
 				self.camidx,
-				self.allocs.vert_alloc.id,
+				self.allocs.other_alloc.id,
 				self.cambuf.offset(),
 				size_of::<CameraUniform>() as _,
 			);
