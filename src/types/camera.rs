@@ -8,7 +8,7 @@ pub struct Camera {
 	pub z_near: f32,
 	pub z_far: f32,
 	pub fov: f32,
-	pub aspect: f32, // aspect = screen_height / screen_width
+	pub aspect: f32,
 }
 impl Camera {
 	pub fn new() -> Self {

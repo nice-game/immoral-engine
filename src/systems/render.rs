@@ -13,12 +13,22 @@ use gl::{types::GLuint, Gl};
 use specs::{prelude::*, System};
 use std::{ffi::CString, iter::repeat, mem::size_of, ptr, sync::Arc};
 
+pub struct RenderSys_DrawCommand {
+	count: u32,
+	instanceCount: u32,
+	firstIndex: u32,
+	baseVertex: u32,
+	baseInstance: u32,
+}
 pub struct RenderSys {
 	allocs: Arc<RenderAllocs>,
 	vao: GLuint,
 	shader: GLuint,
 	camidx: GLuint,
 	cambuf: Buffer<CameraUniform>,
+	cmdA: Buffer<RenderSys_DrawCommand>,
+	cmdB: Buffer<RenderSys_DrawCommand>,
+	cmd_phase: i32,
 }
 impl RenderSys {
 	pub fn new(allocs: &Arc<RenderAllocs>) -> Self {
@@ -59,7 +69,11 @@ impl RenderSys {
 
 			let cambuf = allocs.alloc_other(&CameraUniform::default());
 
-			Self { allocs: allocs.clone(), vao, shader, cambuf, camidx }
+			let cmdA = allocs.alloc_other(&RenderSys_DrawCommand::default());
+			let cmdB = allocs.alloc_other(&RenderSys_DrawCommand::default());
+			let cmd_phase = 0;
+
+			Self { allocs: allocs.clone(), vao, shader, camidx, cambuf, cmdA, cmdB, 0 }
 		}
 	}
 }
@@ -83,16 +97,19 @@ impl<'a> System<'a> for RenderSys {
 				self.cambuf.offset(),
 				size_of::<CameraUniform>() as _,
 			);
+			let cmd = if self.cmd_phase == 0 {self.cmdB} else {self.cmdA}
 			for model in models.join() {
 				for mesh in &model.meshes {
-					gl.DrawElements(
-						gl::TRIANGLES,
-						mesh.index_count() as _,
-						gl::UNSIGNED_SHORT,
-						mesh.index_offset() as _,
-					);
+					// cmd[0] = FIXME?
 				}
 			}
+			gl.MultiDrawElementsIndirect(
+				gl::TRIANGLES,
+				gl::UNSIGNED_SHORT,
+				(if self.cmd_phase == 0 {self.cmdA.offset()} else {self.cmdB.offset()} as ptr),
+				1,
+				0,
+			);
 		}
 	}
 }
