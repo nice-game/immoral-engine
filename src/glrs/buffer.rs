@@ -1,5 +1,11 @@
 use crate::glrs::alloc::{Allocation, Allocator};
-use std::{marker::PhantomData, mem::size_of, slice, sync::Arc};
+use std::{
+	marker::PhantomData,
+	mem::size_of,
+	ops::{Deref, DerefMut},
+	slice,
+	sync::Arc,
+};
 
 pub struct Buffer<T: ?Sized> {
 	pub mem: Allocation,
@@ -29,6 +35,30 @@ impl<T: Copy + 'static> Buffer<[T]> {
 impl<T: ?Sized> Buffer<T> {
 	pub fn offset(&self) -> isize {
 		self.mem.offset as _
+	}
+}
+impl<T> Deref for Buffer<T> {
+	type Target = T;
+
+	fn deref(&self) -> &Self::Target {
+		unsafe { &*(self.mem.buf().as_ptr() as *const T) }
+	}
+}
+impl<T> DerefMut for Buffer<T> {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		unsafe { &mut *(self.mem.buf_mut().as_mut_ptr() as *mut T) }
+	}
+}
+impl<T> Deref for Buffer<[T]> {
+	type Target = [T];
+
+	fn deref(&self) -> &Self::Target {
+		unsafe { slice::from_raw_parts(self.mem.buf().as_ptr() as _, self.len()) }
+	}
+}
+impl<T> DerefMut for Buffer<[T]> {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		unsafe { slice::from_raw_parts_mut(self.mem.buf().as_mut_ptr() as _, self.len()) }
 	}
 }
 

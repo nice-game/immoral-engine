@@ -63,6 +63,10 @@ pub struct Allocation {
 	pub size: usize,
 }
 impl Allocation {
+	pub fn buf(&self) -> &[u8] {
+		unsafe { slice::from_raw_parts_mut(self.alloc.buf.as_ptr().add(self.offset as _) as _, self.size) }
+	}
+
 	pub fn buf_mut(&mut self) -> &mut [u8] {
 		unsafe { slice::from_raw_parts_mut(self.alloc.buf.as_ptr().add(self.offset as _) as _, self.size) }
 	}
