@@ -25,7 +25,11 @@ pub struct Mesh {
 }
 impl Mesh {
 	fn from_assimp(alloc: &Arc<RenderAllocs>, mesh: &AssimpMesh) -> Self {
-		let vertices: Vec<_> = mesh.vertex_iter().map(|v| Vertex { pos: [v.x, v.y, v.z].into() }).collect();
+		let vertices: Vec<_> = mesh.vertex_iter().map(|v| Vertex {
+			pos: [v.x, v.y, v.z].into(),
+			rot: UnitQuaternion::identity(),
+			uvw: zero()
+		}).collect();
 		let indices: Vec<_> = mesh
 			.face_iter()
 			.map(|f| {
@@ -54,4 +58,16 @@ impl Mesh {
 pub struct Vertex {
 	#[allow(unused)]
 	pos: Vector3<f32>,
+	rot: Vector4<f32>,
+	uvw: Vector4<f32>,
+}
+
+#[derive(Clone, Copy)]
+pub struct VertexRigged {
+	#[allow(unused)]
+	pos: Vector3<f32>,
+	rot: UnitQuaternion<f32>,
+	uvw: Vector4<f32>,
+	bone_id: Vector4<u8>,
+	bone_wt: Vector4<u8>,
 }

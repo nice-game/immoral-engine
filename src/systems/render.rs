@@ -13,6 +13,7 @@ use gl::{types::GLuint, Gl};
 use specs::{prelude::*, System};
 use std::{ffi::CString, iter::repeat, mem::size_of, ptr, sync::Arc};
 
+#[derive(Clone, Copy, Default)]
 pub struct RenderSys_DrawCommand {
 	count: u32,
 	instanceCount: u32,
@@ -22,7 +23,7 @@ pub struct RenderSys_DrawCommand {
 }
 pub struct RenderSys {
 	allocs: Arc<RenderAllocs>,
-	vao: GLuint,
+	vao: [GLuint; 3],
 	shader: GLuint,
 	camidx: GLuint,
 	cambuf: Buffer<CameraUniform>,
@@ -35,14 +36,19 @@ impl RenderSys {
 		let ctx = allocs.ctx();
 		let gl = &ctx.gl;
 
-		let mut vao = 0;
+		let mut vao = [0, 0, 0];
+		let vsize = [2, 3, 3];
 		unsafe {
-			gl.CreateVertexArrays(1, &mut vao);
-			gl.EnableVertexArrayAttrib(vao, 0);
-			gl.VertexArrayAttribFormat(vao, 0, 2, gl::FLOAT, gl::FALSE, 0);
-			gl.VertexArrayAttribBinding(vao, 0, 0);
-			gl.VertexArrayVertexBuffer(vao, 0, allocs.vert_alloc.id, 0, size_of::<Vertex>() as _);
-			gl.VertexArrayElementBuffer(vao, allocs.idx_alloc.id);
+			gl.CreateVertexArrays(3, vao.as_mut_ptr());
+			for i in 0..3 {
+				gl.EnableVertexArrayAttrib(vao[i], 0);
+				gl.VertexArrayAttribFormat(vao[i], 0, vsize[i], gl::FLOAT, gl::FALSE, 0);
+				gl.VertexArrayAttribBinding(vao[i], 0, 0);
+				gl.VertexArrayVertexBuffer(vao[i], 0, allocs.vert_alloc.id, 0, size_of::<Vertex>() as _);
+				gl.VertexArrayElementBuffer(vao[i], allocs.idx_alloc.id);
+
+			}
+			gl.BindVertexArray(self.vao);
 
 			let src = CString::new(include_str!("../shaders/shader.vert")).unwrap();
 			let vshader = gl.CreateShader(gl::VERTEX_SHADER);
@@ -72,8 +78,21 @@ impl RenderSys {
 			let cmdA = allocs.alloc_other(&RenderSys_DrawCommand::default());
 			let cmdB = allocs.alloc_other(&RenderSys_DrawCommand::default());
 			let cmd_phase = 0;
+			
+			gl.BindBufferRange(
+				gl::UNIFORM_BUFFER,
+				self.camidx,
+				self.allocs.other_alloc.id,
+				self.cambuf.offset(),
+				size_of::<CameraUniform>() as _,
+			);
 
-			Self { allocs: allocs.clone(), vao, shader, camidx, cambuf, cmdA, cmdB, 0 }
+			gl.BindBuffer(
+				gl::DRAW_INDIRECT_BUFFER,
+				self.allocs.other_alloc.id,
+			);
+
+			Self { allocs: allocs.clone(), vao, shader, camidx, cambuf, cmdA, cmdB, cmd_phase: 0 }
 		}
 	}
 }
@@ -88,25 +107,20 @@ impl<'a> System<'a> for RenderSys {
 		let gl = &self.allocs.ctx().gl;
 		unsafe {
 			gl.UseProgram(self.shader);
-			gl.BindVertexArray(self.vao);
-			// does this need to be bound every frame?
-			gl.BindBufferRange(
-				gl::UNIFORM_BUFFER,
-				self.camidx,
-				self.allocs.other_alloc.id,
-				self.cambuf.offset(),
-				size_of::<CameraUniform>() as _,
-			);
-			let cmd = if self.cmd_phase == 0 {self.cmdB} else {self.cmdA}
+			let cmd = if self.cmd_phase == 0 {&mut self.cmdB} else {&mut self.cmdA};
 			for model in models.join() {
 				for mesh in &model.meshes {
-					// cmd[0] = FIXME?
+					cmd[0].count = mesh.index_count();
+					cmd[0].instanceCount = 0;
+					cmd[0].firstIndex = ?;
+					cmd[0].baseVertex = ?;
+					cmd[0].baseInstance = 0;
 				}
 			}
 			gl.MultiDrawElementsIndirect(
 				gl::TRIANGLES,
 				gl::UNSIGNED_SHORT,
-				(if self.cmd_phase == 0 {self.cmdA.offset()} else {self.cmdB.offset()} as ptr),
+				(if self.cmd_phase == 0 {self.cmdA.offset()} else {self.cmdB.offset()} as _),
 				1,
 				0,
 			);
