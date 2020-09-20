@@ -22,9 +22,12 @@ use glutin::{
 	ContextBuilder, ContextWrapper, GlProfile, PossiblyCurrent,
 };
 use shipyard::{system, EntitiesViewMut, UniqueViewMut, ViewMut, World};
-use std::sync::{
-	atomic::{AtomicBool, Ordering},
-	Arc,
+use std::{
+	sync::{
+		atomic::{AtomicBool, Ordering},
+		Arc,
+	},
+	time::{Duration, Instant},
 };
 
 fn main() {
@@ -44,10 +47,13 @@ fn main() {
 
 	unsafe { ctx.gl.ClearColor(0.1, 0.1, 0.1, 1.0) };
 
+	let mut last_instant = Instant::now();
+
 	let window_events: Vec<WindowEvent> = vec![];
 	let device_events: Vec<DeviceEvent> = vec![];
 	world.add_unique(window_events.clone());
 	world.add_unique(device_events.clone());
+	world.add_unique(Instant::now() - last_instant);
 
 	event_loop.run(move |event, _window, control| {
 		*control = ControlFlow::Poll;
@@ -62,6 +68,11 @@ fn main() {
 			Event::MainEventsCleared => {
 				unsafe { ctx.gl.Clear(gl::COLOR_BUFFER_BIT) };
 
+				world.run(|mut delta: UniqueViewMut<Duration>| {
+					let now = Instant::now();
+					*delta = now - last_instant;
+					last_instant = now;
+				});
 				world.run_default();
 				if ctx.quit.load(Ordering::Relaxed) {
 					*control = ControlFlow::Exit;
