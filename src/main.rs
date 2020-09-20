@@ -19,7 +19,7 @@ use glutin::{
 	event::{DeviceEvent, Event, WindowEvent},
 	event_loop::{ControlFlow, EventLoop},
 	window::{Window, WindowBuilder},
-	ContextBuilder, ContextWrapper, PossiblyCurrent,
+	ContextBuilder, ContextWrapper, GlProfile, PossiblyCurrent,
 };
 use specs::prelude::*;
 use std::sync::{
@@ -91,7 +91,8 @@ pub struct Ctx {
 impl Ctx {
 	fn new(event_loop: &EventLoop<()>) -> Arc<Self> {
 		let window = WindowBuilder::new();
-		let window = ContextBuilder::new().build_windowed(window, &event_loop).unwrap();
+		let window =
+			ContextBuilder::new().with_gl_profile(GlProfile::Core).build_windowed(window, &event_loop).unwrap();
 		let window = unsafe { window.make_current() }.unwrap();
 
 		let gl = Gl::load_with(|ptr| window.get_proc_address(ptr) as *const _);
