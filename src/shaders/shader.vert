@@ -27,5 +27,5 @@ vec4 perspective(vec4 Projection, vec3 Position) {
 void main() {
 	vec3 WorldPosition = VertexPosition; // FIXME: apply model transform
 	vec3 EyePosition = quat_mul(quat_inv(cam.rot), WorldPosition) - cam.pos;
-	gl_Position = vec4(EyePosition, 1.0);//perspective(cam.proj, vec3(EyePosition.xz, -EyePosition.y));
+	gl_Position = perspective(cam.proj, vec3(EyePosition.xz, -EyePosition.y));
 }

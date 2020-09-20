@@ -20,7 +20,7 @@ impl Model {
 }
 
 pub struct Mesh {
-	_buf: Buffer<[Vertex]>,
+	pub buf: Buffer<[Vertex]>,
 	indices: Buffer<[u16]>,
 }
 impl Mesh {
@@ -42,7 +42,7 @@ impl Mesh {
 		let buf = alloc.alloc_verts(&vertices);
 		let indices = alloc.alloc_indices(&indices);
 
-		Self { _buf: buf, indices }
+		Self { buf: buf, indices }
 	}
 
 	pub fn index_offset(&self) -> GLint {

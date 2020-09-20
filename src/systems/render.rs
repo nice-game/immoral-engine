@@ -117,7 +117,7 @@ impl RenderSys {
 				gl::DRAW_INDIRECT_BUFFER,
 				allocs.other_alloc.id,
 			);
-
+			
 			Self { allocs: allocs.clone(), vao, shader, camidx, cambuf, cmd_a, cmd_b, cmd_a_length: 0, cmd_b_length: 0, cmd_phase: false }
 		}
 	}
@@ -133,7 +133,7 @@ impl<'a> System<'a> for RenderSys {
 		let gl = &self.allocs.ctx().gl;
 		unsafe {
 			gl.UseProgram(self.shader);
-			gl.BindVertexArray(self.vao[1]);
+
 			let mut cmd_counter = 0;
 			let cmd = if !self.cmd_phase {
 				&mut self.cmd_a
@@ -145,7 +145,7 @@ impl<'a> System<'a> for RenderSys {
 					cmd[cmd_counter].count = mesh.index_count() as u32;
 					cmd[cmd_counter].instance_count = 1 as u32;
 					cmd[cmd_counter].first_index = mesh.index_offset() as u32;
-					cmd[cmd_counter].base_vertex = 0 as u32;
+					cmd[cmd_counter].base_vertex = mesh.buf.offset() as u32;
 					cmd[cmd_counter].base_instance = 0 as u32;
 					cmd_counter += 1;
 				}
@@ -157,7 +157,8 @@ impl<'a> System<'a> for RenderSys {
 				self.cmd_b_length = cmd_counter;
 				self.cmd_phase = true;
 			}
-
+			/*
+			gl.BindVertexArray(self.vao[1]);
 			gl.MultiDrawElementsIndirect(
 				gl::TRIANGLES,
 				gl::UNSIGNED_SHORT,
@@ -165,6 +166,18 @@ impl<'a> System<'a> for RenderSys {
 				if self.cmd_phase {self.cmd_a_length} else {self.cmd_b_length} as _,
 				0,
 			);
+			*/
+			for model in models.join() {
+				for mesh in &model.meshes {
+					gl.BindVertexArray(self.vao[1]);
+					gl.DrawElements(
+						gl::TRIANGLES,
+						mesh.index_count() as _,
+						gl::UNSIGNED_SHORT,
+						mesh.index_offset() as _,
+					);
+				}
+			}
 		}
 	}
 }

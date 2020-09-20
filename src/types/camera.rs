@@ -1,3 +1,4 @@
+use std::f32::consts::PI;
 use nalgebra::{zero, UnitQuaternion, Vector3, Vector4};
 
 pub struct Camera {
@@ -13,7 +14,7 @@ pub struct Camera {
 impl Camera {
 	pub fn new() -> Self {
 		Self {
-			uniform: CameraUniform { proj: zero(), rot: UnitQuaternion::identity(), pos: zero() },
+			uniform: CameraUniform { proj: zero(), rot: UnitQuaternion::identity(), pos: [0.0, 0.0, 5.0].into() },
 			yaw: 0.0,
 			pitch: 0.0,
 			sensitivity: 1.0,
@@ -26,7 +27,10 @@ impl Camera {
 
 	pub fn look(&mut self, x: f32, y: f32) {
 		self.yaw -= x * self.sensitivity;
+		self.yaw = self.yaw % (PI*2.0);
 		self.pitch -= y * self.sensitivity;
+		if self.pitch >  PI/2.0 { self.pitch =  PI/2.0; }
+		if self.pitch < -PI/2.0 { self.pitch = -PI/2.0; }
 		self.update();
 	}
 
@@ -38,7 +42,7 @@ impl Camera {
 	pub fn update(&mut self) {
 		self.uniform.rot = UnitQuaternion::from_euler_angles(0.0, 0.0, self.yaw) * UnitQuaternion::from_euler_angles(self.pitch, 0.0, 0.0);
 
-		let fov_tan_inv: f32 = 1.0 / (self.fov * (3.14159/180.0)).tan();
+		let fov_tan_inv: f32 = 1.0 / (self.fov * (PI/180.0)).tan();
 		self.uniform.proj[0] = fov_tan_inv * self.aspect;
 		self.uniform.proj[1] = fov_tan_inv;
 		self.uniform.proj[2] = (self.z_far + self.z_near) / (self.z_near - self.z_far);
