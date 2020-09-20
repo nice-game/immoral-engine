@@ -2,10 +2,8 @@ use crate::{glrs::buffer::Buffer, systems::render::allocs::RenderAllocs};
 use assimp::{Importer, Mesh as AssimpMesh};
 use gl::types::GLint;
 use nalgebra::{Vector3, Vector4, UnitQuaternion};
-use specs::{prelude::*, Component};
 use std::{mem::size_of, sync::Arc};
 
-#[derive(Component)]
 pub struct Model {
 	pub meshes: Vec<Mesh>,
 }
