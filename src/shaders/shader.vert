@@ -1,6 +1,10 @@
 #version 420 core
 
 layout (location = 0) in vec3 VertexPosition;
+layout (location = 1) in vec4 VertexRotation;
+layout (location = 2) in vec4 VertexUVMapping;
+layout (location = 3) in vec4 VertexBoneIDs;
+layout (location = 4) in vec4 VertexBoneWeights;
 
 layout (std140, binding = 0) uniform Camera {
 	vec4 proj;

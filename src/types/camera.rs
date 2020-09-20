@@ -1,4 +1,4 @@
-use nalgebra::{one, zero, UnitQuaternion, Vector3, Vector4};
+use nalgebra::{zero, UnitQuaternion, Vector3, Vector4};
 
 pub struct Camera {
 	pub uniform: CameraUniform,
@@ -13,11 +13,7 @@ pub struct Camera {
 impl Camera {
 	pub fn new() -> Self {
 		Self {
-			uniform: CameraUniform {
-				proj: zero(),
-				rot: UnitQuaternion::identity(),
-				pos: zero()
-			},
+			uniform: CameraUniform { proj: zero(), rot: UnitQuaternion::identity(), pos: zero() },
 			yaw: 0.0,
 			pitch: 0.0,
 			sensitivity: 1.0,

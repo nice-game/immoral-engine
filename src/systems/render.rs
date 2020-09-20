@@ -14,12 +14,12 @@ use specs::{prelude::*, System};
 use std::{ffi::CString, iter::repeat, mem::size_of, ptr, sync::Arc};
 
 #[derive(Clone, Copy, Default)]
-pub struct RenderSys_DrawCommand {
+pub struct RenderSysDrawCommand {
 	count: u32,
-	instanceCount: u32,
-	firstIndex: u32,
-	baseVertex: u32,
-	baseInstance: u32,
+	instance_count: u32,
+	first_index: u32,
+	base_vertex: u32,
+	base_instance: u32,
 }
 pub struct RenderSys {
 	allocs: Arc<RenderAllocs>,
@@ -27,9 +27,11 @@ pub struct RenderSys {
 	shader: GLuint,
 	camidx: GLuint,
 	cambuf: Buffer<CameraUniform>,
-	cmdA: Buffer<[RenderSys_DrawCommand]>,
-	cmdB: Buffer<[RenderSys_DrawCommand]>,
-	cmd_phase: i32,
+	cmd_a: Buffer<[RenderSysDrawCommand]>,
+	cmd_b: Buffer<[RenderSysDrawCommand]>,
+	cmd_a_length: usize,
+	cmd_b_length: usize,
+	cmd_phase: bool,
 }
 impl RenderSys {
 	pub fn new(allocs: &Arc<RenderAllocs>) -> Self {
@@ -41,11 +43,38 @@ impl RenderSys {
 		unsafe {
 			gl.CreateVertexArrays(3, vao.as_mut_ptr());
 			for i in 0..3 {
+				// index buffer
+				gl.VertexArrayElementBuffer(vao[i], allocs.idx_alloc.id);
+
+				// positions
 				gl.EnableVertexArrayAttrib(vao[i], 0);
 				gl.VertexArrayAttribFormat(vao[i], 0, vsize[i], gl::FLOAT, gl::FALSE, 0);
 				gl.VertexArrayAttribBinding(vao[i], 0, 0);
 				gl.VertexArrayVertexBuffer(vao[i], 0, allocs.vert_alloc.id, 0, size_of::<Vertex>() as _);
-				gl.VertexArrayElementBuffer(vao[i], allocs.idx_alloc.id);
+				if i >= 1 {
+					// rotations
+					gl.EnableVertexArrayAttrib(vao[i], 1);
+					gl.VertexArrayAttribFormat(vao[i], 1, 4, gl::FLOAT, gl::FALSE, 12);
+					gl.VertexArrayAttribBinding(vao[i], 1, 0);
+					gl.VertexArrayVertexBuffer(vao[i], 1, allocs.vert_alloc.id, 0, size_of::<Vertex>() as _);
+					// texcoords
+					gl.EnableVertexArrayAttrib(vao[i], 2);
+					gl.VertexArrayAttribFormat(vao[i], 2, 4, gl::FLOAT, gl::FALSE, 28);
+					gl.VertexArrayAttribBinding(vao[i], 2, 0);
+					gl.VertexArrayVertexBuffer(vao[i], 2, allocs.vert_alloc.id, 0, size_of::<Vertex>() as _);
+				}
+				if i >= 2 {
+					// bone ids
+					gl.EnableVertexArrayAttrib(vao[i], 3);
+					gl.VertexArrayAttribFormat(vao[i], 3, 4, gl::UNSIGNED_BYTE, gl::FALSE, 44);
+					gl.VertexArrayAttribBinding(vao[i], 3, 0);
+					gl.VertexArrayVertexBuffer(vao[i], 3, allocs.vert_alloc.id, 0, size_of::<Vertex>() as _);
+					// bone weights
+					gl.EnableVertexArrayAttrib(vao[i], 4);
+					gl.VertexArrayAttribFormat(vao[i], 4, 4, gl::UNSIGNED_BYTE, gl::TRUE, 48);
+					gl.VertexArrayAttribBinding(vao[i], 4, 0);
+					gl.VertexArrayVertexBuffer(vao[i], 4, allocs.vert_alloc.id, 0, size_of::<Vertex>() as _);
+				}
 			}
 
 			let src = CString::new(include_str!("../shaders/shader.vert")).unwrap();
@@ -73,9 +102,8 @@ impl RenderSys {
 
 			let cambuf = allocs.alloc_other(&CameraUniform::default());
 
-			let cmdA = allocs.alloc_other_slice(&[RenderSys_DrawCommand::default(); 100][..]);
-			let cmdB = allocs.alloc_other_slice(&[RenderSys_DrawCommand::default(); 100][..]);
-			let cmd_phase = 0;
+			let cmd_a = allocs.alloc_other_slice(&[RenderSysDrawCommand::default(); 100]);
+			let cmd_b = allocs.alloc_other_slice(&[RenderSysDrawCommand::default(); 100]);
 			
 			gl.BindBufferRange(
 				gl::UNIFORM_BUFFER,
@@ -90,7 +118,7 @@ impl RenderSys {
 				allocs.other_alloc.id,
 			);
 
-			Self { allocs: allocs.clone(), vao, shader, camidx, cambuf, cmdA, cmdB, cmd_phase: 0 }
+			Self { allocs: allocs.clone(), vao, shader, camidx, cambuf, cmd_a, cmd_b, cmd_a_length: 0, cmd_b_length: 0, cmd_phase: false }
 		}
 	}
 }
@@ -106,23 +134,35 @@ impl<'a> System<'a> for RenderSys {
 		unsafe {
 			gl.UseProgram(self.shader);
 			gl.BindVertexArray(self.vao[1]);
-			let cmd = if self.cmd_phase == 0 {&mut self.cmdB} else {&mut self.cmdA};
-			let mut cmd_idx = 0;
+			let mut cmd_counter = 0;
+			let cmd = if !self.cmd_phase {
+				&mut self.cmd_a
+			} else {
+				&mut self.cmd_b
+			};
 			for model in models.join() {
 				for mesh in &model.meshes {
-					cmd[cmd_idx].count = mesh.index_count() as u32;
-					cmd[cmd_idx].instanceCount = 0 as u32;
-					cmd[cmd_idx].firstIndex = 0 as u32;
-					cmd[cmd_idx].baseVertex = 0 as u32;
-					cmd[cmd_idx].baseInstance = 0 as u32;
-					cmd_idx += 1
+					cmd[cmd_counter].count = mesh.index_count() as u32;
+					cmd[cmd_counter].instance_count = 1 as u32;
+					cmd[cmd_counter].first_index = mesh.index_offset() as u32;
+					cmd[cmd_counter].base_vertex = 0 as u32;
+					cmd[cmd_counter].base_instance = 0 as u32;
+					cmd_counter += 1;
 				}
 			}
+			if !self.cmd_phase {
+				self.cmd_a_length = cmd_counter;
+				self.cmd_phase = false;
+			} else {
+				self.cmd_b_length = cmd_counter;
+				self.cmd_phase = true;
+			}
+
 			gl.MultiDrawElementsIndirect(
 				gl::TRIANGLES,
 				gl::UNSIGNED_SHORT,
-				if self.cmd_phase == 0 {self.cmdA.offset()} else {self.cmdB.offset()} as _,
-				cmd_idx as i32,
+				if self.cmd_phase {self.cmd_a.offset()} else {self.cmd_b.offset()} as _,
+				if self.cmd_phase {self.cmd_a_length} else {self.cmd_b_length} as _,
 				0,
 			);
 		}
