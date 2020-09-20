@@ -10,7 +10,7 @@ use crate::{
 	RenderAllocs,
 };
 use gl::{types::GLuint, Gl};
-use specs::{prelude::*, System};
+use shipyard::{IntoIter, UniqueView, UniqueViewMut, View};
 use std::{ffi::CString, iter::repeat, mem::size_of, ptr, sync::Arc};
 
 #[derive(Clone, Copy, Default)]
@@ -21,7 +21,7 @@ pub struct RenderSysDrawCommand {
 	base_vertex: u32,
 	base_instance: u32,
 }
-pub struct RenderSys {
+pub struct RenderState {
 	allocs: Arc<RenderAllocs>,
 	vao: [GLuint; 3],
 	shader: GLuint,
@@ -33,7 +33,7 @@ pub struct RenderSys {
 	cmd_b_length: usize,
 	cmd_phase: bool,
 }
-impl RenderSys {
+impl RenderState {
 	pub fn new(allocs: &Arc<RenderAllocs>) -> Self {
 		let ctx = allocs.ctx();
 		let gl = &ctx.gl;
@@ -104,7 +104,7 @@ impl RenderSys {
 
 			let cmd_a = allocs.alloc_other_slice(&[RenderSysDrawCommand::default(); 100]);
 			let cmd_b = allocs.alloc_other_slice(&[RenderSysDrawCommand::default(); 100]);
-			
+
 			gl.BindBufferRange(
 				gl::UNIFORM_BUFFER,
 				camidx,
@@ -113,70 +113,63 @@ impl RenderSys {
 				size_of::<CameraUniform>() as _,
 			);
 
-			gl.BindBuffer(
-				gl::DRAW_INDIRECT_BUFFER,
-				allocs.other_alloc.id,
-			);
-			
-			Self { allocs: allocs.clone(), vao, shader, camidx, cambuf, cmd_a, cmd_b, cmd_a_length: 0, cmd_b_length: 0, cmd_phase: false }
+			gl.BindBuffer(gl::DRAW_INDIRECT_BUFFER, allocs.other_alloc.id);
+
+			Self {
+				allocs: allocs.clone(),
+				vao,
+				shader,
+				camidx,
+				cambuf,
+				cmd_a,
+				cmd_b,
+				cmd_a_length: 0,
+				cmd_b_length: 0,
+				cmd_phase: false,
+			}
 		}
 	}
 }
-impl<'a> System<'a> for RenderSys {
-	type SystemData = (ReadStorage<'a, PlayerController>, ReadStorage<'a, Model>);
 
-	fn run(&mut self, (players, models): Self::SystemData) {
-		let player = players.join().next().unwrap();
+pub fn render(mut state: UniqueViewMut<RenderState>, player: UniqueView<PlayerController>, models: View<Model>) {
+	state.cambuf.copy(&player.cam.uniform);
 
-		self.cambuf.copy(&player.cam.uniform);
+	unsafe {
+		let gl = &state.allocs.ctx().gl;
+		gl.UseProgram(state.shader);
 
-		let gl = &self.allocs.ctx().gl;
-		unsafe {
-			gl.UseProgram(self.shader);
-
-			let mut cmd_counter = 0;
-			let cmd = if !self.cmd_phase {
-				&mut self.cmd_a
-			} else {
-				&mut self.cmd_b
-			};
-			for model in models.join() {
-				for mesh in &model.meshes {
-					cmd[cmd_counter].count = mesh.index_count() as u32;
-					cmd[cmd_counter].instance_count = 1 as u32;
-					cmd[cmd_counter].first_index = mesh.index_offset() as u32;
-					cmd[cmd_counter].base_vertex = mesh.buf.offset() as u32;
-					cmd[cmd_counter].base_instance = 0 as u32;
-					cmd_counter += 1;
-				}
+		let mut cmd_counter = 0;
+		let cmd = if !state.cmd_phase { &mut state.cmd_a } else { &mut state.cmd_b };
+		for model in models.iter() {
+			for mesh in &model.meshes {
+				cmd[cmd_counter].count = mesh.index_count() as u32;
+				cmd[cmd_counter].instance_count = 1 as u32;
+				cmd[cmd_counter].first_index = mesh.index_offset() as u32;
+				cmd[cmd_counter].base_vertex = mesh.buf.offset() as u32;
+				cmd[cmd_counter].base_instance = 0 as u32;
+				cmd_counter += 1;
 			}
-			if !self.cmd_phase {
-				self.cmd_a_length = cmd_counter;
-				self.cmd_phase = false;
-			} else {
-				self.cmd_b_length = cmd_counter;
-				self.cmd_phase = true;
-			}
-			/*
-			gl.BindVertexArray(self.vao[1]);
-			gl.MultiDrawElementsIndirect(
-				gl::TRIANGLES,
-				gl::UNSIGNED_SHORT,
-				if self.cmd_phase {self.cmd_a.offset()} else {self.cmd_b.offset()} as _,
-				if self.cmd_phase {self.cmd_a_length} else {self.cmd_b_length} as _,
-				0,
-			);
-			*/
-			for model in models.join() {
-				for mesh in &model.meshes {
-					gl.BindVertexArray(self.vao[1]);
-					gl.DrawElements(
-						gl::TRIANGLES,
-						mesh.index_count() as _,
-						gl::UNSIGNED_SHORT,
-						mesh.index_offset() as _,
-					);
-				}
+		}
+		if !state.cmd_phase {
+			state.cmd_a_length = cmd_counter;
+			state.cmd_phase = false;
+		} else {
+			state.cmd_b_length = cmd_counter;
+			state.cmd_phase = true;
+		}
+		let gl = &state.allocs.ctx().gl;
+		// gl.BindVertexArray(state.vao[1]);
+		// gl.MultiDrawElementsIndirect(
+		// gl::TRIANGLES,
+		// gl::UNSIGNED_SHORT,
+		// if state.cmd_phase {state.cmd_a.offset()} else {state.cmd_b.offset()} as _,
+		// if state.cmd_phase {state.cmd_a_length} else {state.cmd_b_length} as _,
+		// 0,
+		// );
+		for model in models.iter() {
+			for mesh in &model.meshes {
+				gl.BindVertexArray(state.vao[1]);
+				gl.DrawElements(gl::TRIANGLES, mesh.index_count() as _, gl::UNSIGNED_SHORT, mesh.index_offset() as _);
 			}
 		}
 	}
