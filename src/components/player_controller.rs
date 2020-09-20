@@ -1,8 +1,6 @@
 use crate::types::camera::Camera;
 use nalgebra::Vector3;
-use specs::{prelude::*, Component};
 
-#[derive(Component)]
 pub struct PlayerController {
 	pub cam: Camera,
 }

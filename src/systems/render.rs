@@ -10,17 +10,17 @@ use crate::{
 	RenderAllocs,
 };
 use gl::{types::GLuint, Gl};
-use specs::{prelude::*, System};
+use shipyard::{IntoIter, UniqueView, UniqueViewMut, View};
 use std::{ffi::CString, iter::repeat, mem::size_of, ptr, sync::Arc};
 
-pub struct RenderSys {
+pub struct RenderState {
 	allocs: Arc<RenderAllocs>,
 	vao: GLuint,
 	shader: GLuint,
 	camidx: GLuint,
 	cambuf: Buffer<CameraUniform>,
 }
-impl RenderSys {
+impl RenderState {
 	pub fn new(allocs: &Arc<RenderAllocs>) -> Self {
 		let ctx = allocs.ctx();
 		let gl = &ctx.gl;
@@ -63,35 +63,24 @@ impl RenderSys {
 		}
 	}
 }
-impl<'a> System<'a> for RenderSys {
-	type SystemData = (ReadStorage<'a, PlayerController>, ReadStorage<'a, Model>);
 
-	fn run(&mut self, (players, models): Self::SystemData) {
-		let player = players.join().next().unwrap();
+pub fn render(mut state: UniqueViewMut<RenderState>, player: UniqueView<PlayerController>, models: View<Model>) {
+	state.cambuf.copy(&player.cam.uniform);
 
-		self.cambuf.copy(&player.cam.uniform);
-
-		let gl = &self.allocs.ctx().gl;
-		unsafe {
-			gl.UseProgram(self.shader);
-			gl.BindVertexArray(self.vao);
-			// does this need to be bound every frame?
-			gl.BindBufferRange(
-				gl::UNIFORM_BUFFER,
-				self.camidx,
-				self.allocs.other_alloc.id,
-				self.cambuf.offset(),
-				size_of::<CameraUniform>() as _,
-			);
-			for model in models.join() {
-				for mesh in &model.meshes {
-					gl.DrawElements(
-						gl::TRIANGLES,
-						mesh.index_count() as _,
-						gl::UNSIGNED_SHORT,
-						mesh.index_offset() as _,
-					);
-				}
+	let gl = &state.allocs.ctx().gl;
+	unsafe {
+		gl.UseProgram(state.shader);
+		gl.BindVertexArray(state.vao);
+		gl.BindBufferRange(
+			gl::UNIFORM_BUFFER,
+			state.camidx,
+			state.allocs.other_alloc.id,
+			state.cambuf.offset(),
+			size_of::<CameraUniform>() as _,
+		);
+		for model in models.iter() {
+			for mesh in &model.meshes {
+				gl.DrawElements(gl::TRIANGLES, mesh.index_count() as _, gl::UNSIGNED_SHORT, mesh.index_offset() as _);
 			}
 		}
 	}

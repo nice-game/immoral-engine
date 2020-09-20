@@ -9,9 +9,9 @@ use crate::{
 	components::{model::Model, player_controller::PlayerController},
 	glrs::alloc::Allocator,
 	systems::{
-		gui::GuiSys,
-		player::PlayerSys,
-		render::{allocs::RenderAllocs, RenderSys},
+		gui::update_gui,
+		player::update_player,
+		render::{allocs::RenderAllocs, render, RenderState},
 	},
 };
 use gl::Gl;
@@ -21,7 +21,7 @@ use glutin::{
 	window::{Window, WindowBuilder},
 	ContextBuilder, ContextWrapper, PossiblyCurrent,
 };
-use specs::prelude::*;
+use shipyard::{system, EntitiesViewMut, UniqueViewMut, ViewMut, World};
 use std::sync::{
 	atomic::{AtomicBool, Ordering},
 	Arc,
@@ -32,54 +32,67 @@ fn main() {
 	let ctx = Ctx::new(&event_loop);
 	let allocs = RenderAllocs::new(&ctx);
 
-	let mut world = World::new();
-	world.insert(ctx.clone());
-	world.insert(Vec::<DeviceEvent>::new());
-	world.insert(Vec::<WindowEvent>::new());
-	world.register::<Model>();
-	world.register::<PlayerController>();
-	world.create_entity().with(PlayerController::new()).build();
-	world.create_entity().with(Model::from_file(&allocs, "assets/baldman.dae")).build();
+	let world = World::new();
+	world.add_unique(ctx.clone());
+	world.add_unique(RenderState::new(&allocs));
+	world.add_unique(PlayerController::new());
+	world.run(|mut entities: EntitiesViewMut, mut models: ViewMut<Model>| {
+		entities.add_entity(&mut models, Model::from_file(&allocs, "assets/baldman.dae"));
+	});
 
-	let mut dispatcher = DispatcherBuilder::new()
-		.with(PlayerSys, "", &[])
-		.with(GuiSys, "", &[])
-		.with_thread_local(RenderSys::new(&allocs))
-		.build();
-	dispatcher.setup(&mut world);
+	world.add_workload("").with_system(system!(update_gui)).with_system(system!(update_player)).build();
 
 	unsafe { ctx.gl.ClearColor(0.1, 0.1, 0.1, 1.0) };
 
+	let window_events: Vec<WindowEvent> = vec![];
+	let device_events: Vec<DeviceEvent> = vec![];
+	world.add_unique(window_events.clone());
+	world.add_unique(device_events.clone());
+
 	event_loop.run(move |event, _window, control| {
 		*control = ControlFlow::Poll;
-
-		unsafe { ctx.gl.Clear(gl::COLOR_BUFFER_BIT) };
-
-		dispatcher.dispatch(&mut world);
-		if ctx.quit.load(Ordering::Relaxed) {
-			*control = ControlFlow::Exit;
-			return;
-		}
-		world.maintain();
-
-		unsafe { ctx.gl.Flush() };
-		ctx.window.swap_buffers().unwrap();
-
-		let device_events = world.get_mut::<Vec<DeviceEvent>>().unwrap();
-		device_events.clear();
-		let window_events = world.get_mut::<Vec<WindowEvent>>().unwrap();
-		window_events.clear();
 
 		match event {
 			Event::WindowEvent { event, .. } => match event {
 				WindowEvent::CloseRequested => *control = ControlFlow::Exit,
 				WindowEvent::Resized(physical_size) => ctx.window.resize(physical_size),
-				_ => world.get_mut::<Vec<WindowEvent>>().unwrap().push(event.to_static().unwrap()),
+				_ => world.run(|events| push_window_event(event, events)),
 			},
-			Event::DeviceEvent { event, .. } => world.get_mut::<Vec<DeviceEvent>>().unwrap().push(event),
+			Event::DeviceEvent { event, .. } => world.run(|events| push_device_event(event, events)),
+			Event::MainEventsCleared => {
+				unsafe { ctx.gl.Clear(gl::COLOR_BUFFER_BIT) };
+
+				world.run_default();
+				if ctx.quit.load(Ordering::Relaxed) {
+					*control = ControlFlow::Exit;
+					return;
+				}
+				world.run(render);
+
+				unsafe { ctx.gl.Flush() };
+				ctx.window.swap_buffers().unwrap();
+
+				world.run(clear_events);
+			},
 			_ => (),
 		};
 	});
+}
+
+fn clear_events(
+	mut window_events: UniqueViewMut<Vec<WindowEvent>>,
+	mut device_events: UniqueViewMut<Vec<DeviceEvent>>,
+) {
+	window_events.clear();
+	device_events.clear();
+}
+
+fn push_device_event(event: DeviceEvent, mut device_events: UniqueViewMut<Vec<DeviceEvent>>) {
+	device_events.push(event);
+}
+
+fn push_window_event(event: WindowEvent, mut window_events: UniqueViewMut<Vec<WindowEvent>>) {
+	window_events.push(event.to_static().unwrap());
 }
 
 pub struct Ctx {
