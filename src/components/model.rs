@@ -23,13 +23,26 @@ pub struct Mesh {
 }
 impl Mesh {
 	fn from_assimp(alloc: &Arc<RenderAllocs>, mesh: &AssimpMesh) -> Self {
-		let vertices: Vec<_> = mesh.vertex_iter()
-						.zip(mesh.normal_iter())
-						.map(|(v, n)| Vertex {
-			pos: [v.x, v.y, v.z].into(),
-			rot: UnitQuaternion::rotation_between(&[0.0, 0.0, 1.0].into(), &[v.x, v.y, v.z].into()).unwrap(),
-			uvw: [0.0, 0.0, 0.0, 0.0].into(),
-		}).collect();
+		let vertices: Vec<_> = if mesh.has_texture_coords(1) {
+			mesh.vertex_iter()
+					.zip(mesh.normal_iter())
+					.zip(mesh.texture_coords_iter(0))
+					.zip(mesh.texture_coords_iter(1))
+					.map(|(((v, n), u), l)| Vertex {
+				pos: [v.x, v.y, v.z].into(),
+				rot: UnitQuaternion::rotation_between(&[0.0, 0.0, 1.0].into(), &[n.x, n.y, n.z].into()).unwrap(),
+				uvw: [u.x, u.y, l.x, l.y].into(),
+			}).collect()
+		} else {
+			mesh.vertex_iter()
+					.zip(mesh.normal_iter())
+					.zip(mesh.texture_coords_iter(0))
+					.map(|((v, n), u)| Vertex {
+				pos: [v.x, v.y, v.z].into(),
+				rot: UnitQuaternion::rotation_between(&[0.0, 0.0, 1.0].into(), &[n.x, n.y, n.z].into()).unwrap(),
+				uvw: [u.x, u.y, 0.0, 0.0].into(),
+			}).collect()
+		};
 		let indices: Vec<_> = mesh
 			.face_iter()
 			.map(|f| {
