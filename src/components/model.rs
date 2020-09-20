@@ -29,7 +29,7 @@ impl Mesh {
 						.zip(mesh.normal_iter())
 						.map(|(v, n)| Vertex {
 			pos: [v.x, v.y, v.z].into(),
-			rot: UnitQuaternion::rotation_between(&[0.0, 0.0, 1.0].into(), &[v.x, v.y, v.z].into()).unwrap(),
+			rot: UnitQuaternion::rotation_between(&[0.0, 0.0, 1.0].into(), &[n.x, n.y, n.z].into()).unwrap(),
 			uvw: [0.0, 0.0, 0.0, 0.0].into(),
 		}).collect();
 		let indices: Vec<_> = mesh

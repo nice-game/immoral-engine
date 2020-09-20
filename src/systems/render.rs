@@ -113,10 +113,7 @@ impl RenderSys {
 				size_of::<CameraUniform>() as _,
 			);
 
-			gl.BindBuffer(
-				gl::DRAW_INDIRECT_BUFFER,
-				allocs.other_alloc.id,
-			);
+			gl.BindBuffer(gl::DRAW_INDIRECT_BUFFER, allocs.other_alloc.id);
 			
 			Self { allocs: allocs.clone(), vao, shader, camidx, cambuf, cmd_a, cmd_b, cmd_a_length: 0, cmd_b_length: 0, cmd_phase: false }
 		}
