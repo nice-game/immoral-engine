@@ -59,6 +59,195 @@
             },
             "args": [],
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'assimp'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=assimp"
+                ],
+                "filter": {
+                    "name": "assimp",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'render'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=render",
+                    "--package=assimp"
+                ],
+                "filter": {
+                    "name": "render",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'render'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=render",
+                    "--package=assimp"
+                ],
+                "filter": {
+                    "name": "render",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'import'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=import",
+                    "--package=assimp"
+                ],
+                "filter": {
+                    "name": "import",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'log'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=log",
+                    "--package=assimp"
+                ],
+                "filter": {
+                    "name": "log",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'math_conversion_tests'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=math_conversion_tests",
+                    "--package=assimp"
+                ],
+                "filter": {
+                    "name": "math_conversion_tests",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'scene'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=scene",
+                    "--package=assimp"
+                ],
+                "filter": {
+                    "name": "scene",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'assimp-sys'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=assimp-sys"
+                ],
+                "filter": {
+                    "name": "assimp-sys",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'string'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=string",
+                    "--package=assimp-sys"
+                ],
+                "filter": {
+                    "name": "string",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'version'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=version",
+                    "--package=assimp-sys"
+                ],
+                "filter": {
+                    "name": "version",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
         }
     ]
 }

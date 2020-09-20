@@ -9,19 +9,23 @@ use crate::{
 	components::{model::Model, player_controller::PlayerController},
 	glrs::alloc::Allocator,
 	systems::{
+		gui::GuiSys,
 		player::PlayerSys,
 		render::{allocs::RenderAllocs, RenderSys},
 	},
 };
 use gl::Gl;
 use glutin::{
-	event::{DeviceEvent, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
+	event::{DeviceEvent, Event, WindowEvent},
 	event_loop::{ControlFlow, EventLoop},
 	window::{Window, WindowBuilder},
 	ContextBuilder, ContextWrapper, PossiblyCurrent,
 };
 use specs::prelude::*;
-use std::{collections::VecDeque, sync::Arc};
+use std::sync::{
+	atomic::{AtomicBool, Ordering},
+	Arc,
+};
 
 fn main() {
 	let event_loop = EventLoop::new();
@@ -29,14 +33,19 @@ fn main() {
 	let allocs = RenderAllocs::new(&ctx);
 
 	let mut world = World::new();
-	world.insert(VecDeque::<DeviceEvent>::new());
+	world.insert(ctx.clone());
+	world.insert(Vec::<DeviceEvent>::new());
+	world.insert(Vec::<WindowEvent>::new());
 	world.register::<Model>();
 	world.register::<PlayerController>();
 	world.create_entity().with(PlayerController::new()).build();
 	world.create_entity().with(Model::from_file(&allocs, "assets/baldman.dae")).build();
 
-	let mut dispatcher =
-		DispatcherBuilder::new().with(PlayerSys, "", &[]).with_thread_local(RenderSys::new(&allocs)).build();
+	let mut dispatcher = DispatcherBuilder::new()
+		.with(PlayerSys, "", &[])
+		.with(GuiSys, "", &[])
+		.with_thread_local(RenderSys::new(&allocs))
+		.build();
 	dispatcher.setup(&mut world);
 
 	unsafe { ctx.gl.ClearColor(0.1, 0.1, 0.1, 1.0) };
@@ -45,27 +54,29 @@ fn main() {
 		*control = ControlFlow::Poll;
 
 		unsafe { ctx.gl.Clear(gl::COLOR_BUFFER_BIT) };
+
 		dispatcher.dispatch(&mut world);
+		if ctx.quit.load(Ordering::Relaxed) {
+			*control = ControlFlow::Exit;
+			return;
+		}
 		world.maintain();
+
 		unsafe { ctx.gl.Flush() };
 		ctx.window.swap_buffers().unwrap();
 
-		let input = world.get_mut::<VecDeque<DeviceEvent>>().unwrap();
-		input.clear();
+		let device_events = world.get_mut::<Vec<DeviceEvent>>().unwrap();
+		device_events.clear();
+		let window_events = world.get_mut::<Vec<WindowEvent>>().unwrap();
+		window_events.clear();
 
 		match event {
 			Event::WindowEvent { event, .. } => match event {
 				WindowEvent::CloseRequested => *control = ControlFlow::Exit,
-				WindowEvent::KeyboardInput { input: KeyboardInput { virtual_keycode, .. }, .. } => {
-					match virtual_keycode {
-						Some(VirtualKeyCode::Escape) => *control = ControlFlow::Exit,
-						_ => (),
-					}
-				},
 				WindowEvent::Resized(physical_size) => ctx.window.resize(physical_size),
-				_ => (),
+				_ => world.get_mut::<Vec<WindowEvent>>().unwrap().push(event.to_static().unwrap()),
 			},
-			Event::DeviceEvent { event, .. } => input.push_back(event),
+			Event::DeviceEvent { event, .. } => world.get_mut::<Vec<DeviceEvent>>().unwrap().push(event),
 			_ => (),
 		};
 	});
@@ -74,6 +85,8 @@ fn main() {
 pub struct Ctx {
 	window: ContextWrapper<PossiblyCurrent, Window>,
 	gl: Gl,
+	grab: AtomicBool,
+	quit: AtomicBool,
 }
 impl Ctx {
 	fn new(event_loop: &EventLoop<()>) -> Arc<Self> {
@@ -84,7 +97,16 @@ impl Ctx {
 		let gl = Gl::load_with(|ptr| window.get_proc_address(ptr) as *const _);
 		assert_eq!(unsafe { gl.GetError() }, 0);
 
-		Arc::new(Self { window, gl })
+		Arc::new(Self { window, gl, grab: AtomicBool::default(), quit: AtomicBool::default() })
+	}
+
+	fn quit(&self) {
+		self.quit.store(true, Ordering::Relaxed);
+	}
+
+	fn set_grab(&self, grab: bool) {
+		self.window.window().set_cursor_grab(grab).unwrap();
+		self.grab.store(grab, Ordering::Relaxed);
 	}
 }
 unsafe impl Send for Ctx {}
