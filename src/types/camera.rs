@@ -14,7 +14,7 @@ pub struct Camera {
 impl Camera {
 	pub fn new() -> Self {
 		Self {
-			uniform: CameraUniform { proj: zero(), rot: UnitQuaternion::identity(), pos: [0.0, 0.0, 5.0].into() },
+			uniform: CameraUniform { proj: zero(), rot: UnitQuaternion::identity(), pos: zero() },
 			yaw: 0.0,
 			pitch: 0.0,
 			sensitivity: 1.0,
