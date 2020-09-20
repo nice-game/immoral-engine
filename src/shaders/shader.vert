@@ -8,6 +8,7 @@ layout (location = 4) in vec4 VertexBoneWeights;
 
 out vec3 WorldPosition;
 out vec3 WorldNormal;
+out vec4 UVMapping;
 
 layout (std140, binding = 0) uniform Camera {
 	vec4 proj;
@@ -30,6 +31,7 @@ vec4 perspective(vec4 Projection, vec3 Position) {
 void main() {
 	WorldPosition = VertexPosition; // FIXME: apply model transform
 	WorldNormal = quat_mul(VertexRotation, vec3(0.0, 0.0, 1.0));
+	UVMapping = VertexUVMapping;
 	vec3 EyePosition = quat_mul(quat_inv(cam.rot), WorldPosition - cam.pos);
 	gl_Position = perspective(cam.proj, vec3(EyePosition.xz, -EyePosition.y));
 }
