@@ -2,19 +2,30 @@ use crate::{
 	systems::render::{Buffer, Vertex},
 	Allocator, Ctx,
 };
-use std::sync::Arc;
+use gl::types::GLuint;
+use std::sync::{atomic::AtomicI32, Arc};
 
 pub struct RenderAllocs {
-	pub(super) vert_alloc: Arc<Allocator>,
-	pub(super) idx_alloc: Arc<Allocator>,
-	pub(super) other_alloc: Arc<Allocator>,
+	pub vert_alloc: Arc<Allocator>,
+	pub idx_alloc: Arc<Allocator>,
+	pub other_alloc: Arc<Allocator>,
+	pub tex: GLuint,
+	pub tex_free: AtomicI32,
 }
 impl RenderAllocs {
 	pub fn new(ctx: &Arc<Ctx>) -> Arc<Self> {
+		let mut tex = 0;
+		unsafe {
+			ctx.gl.CreateTextures(gl::TEXTURE_2D_ARRAY, 1, &mut tex);
+			ctx.gl.TextureStorage3D(tex, 1, gl::RGBA8, 1024, 1024, 64);
+		}
+
 		Arc::new(Self {
 			vert_alloc: Allocator::new(ctx, true),
 			idx_alloc: Allocator::new(ctx, true),
 			other_alloc: Allocator::new(ctx, false),
+			tex,
+			tex_free: AtomicI32::default(),
 		})
 	}
 
