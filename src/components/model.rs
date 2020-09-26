@@ -29,7 +29,7 @@ impl Model {
 	}
 }
 
-fn get_textures(file: &Path, scene: &Scene, alloc: &RenderAllocs) -> Vec<i32> {
+fn get_textures(file: &Path, scene: &Scene, alloc: &RenderAllocs) -> Vec<f32> {
 	let gl = &alloc.ctx().gl;
 	unsafe { gl.BindBuffer(gl::PIXEL_UNPACK_BUFFER, alloc.other_alloc.id) };
 
@@ -73,9 +73,9 @@ fn get_textures(file: &Path, scene: &Scene, alloc: &RenderAllocs) -> Vec<i32> {
 						buf.offset() as _,
 					)
 				};
-				idx
+				idx as f32
 			} else {
-				-1
+				-1.0
 			}
 		})
 		.collect()
@@ -87,7 +87,7 @@ pub struct Mesh {
 	pub instance: Buffer<Instance>,
 }
 impl Mesh {
-	fn from_assimp(alloc: &Arc<RenderAllocs>, mesh: &AssimpMesh, texidxs: &[i32]) -> Self {
+	fn from_assimp(alloc: &Arc<RenderAllocs>, mesh: &AssimpMesh, texidxs: &[f32]) -> Self {
 		let texcoords = if mesh.get_num_uv_channels() > 1 {
 			Box::new(mesh.texture_coords_iter(1)) as Box<dyn Iterator<Item = Vector3D>>
 		} else {
@@ -134,7 +134,7 @@ impl Mesh {
 #[derive(Clone, Copy)]
 pub struct Instance {
 	/// -1 if no texture
-	tex: i32,
+	tex: f32,
 }
 
 #[allow(unused)]

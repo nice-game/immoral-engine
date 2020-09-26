@@ -1,5 +1,6 @@
 #version 420 core
 
+layout (location = 0) in int VertexTextureIndex; 
 layout (location = 1) in vec3 VertexPosition;
 layout (location = 2) in vec4 VertexRotation;
 layout (location = 3) in vec4 VertexUVMapping;
@@ -9,6 +10,7 @@ layout (location = 5) in vec4 VertexBoneWeights;
 out vec3 WorldPosition;
 out vec3 WorldNormal;
 out vec4 UVMapping;
+out float TextureIndex;
 
 layout (std140, binding = 0) uniform Camera {
 	vec4 proj;
@@ -29,6 +31,7 @@ vec4 perspective(vec4 Projection, vec3 Position) {
 }
 
 void main() {
+	TextureIndex = VertexTextureIndex;
 	WorldPosition = VertexPosition; // FIXME: apply model transform
 	WorldNormal = quat_mul(VertexRotation, vec3(0.0, 0.0, 1.0));
 	UVMapping = VertexUVMapping;

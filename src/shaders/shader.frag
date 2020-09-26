@@ -1,7 +1,6 @@
 #version 420 core
 
-layout (location = 0) flat in int TextureIndex;
-
+in float TextureIndex;
 in vec3 WorldPosition;
 in vec3 WorldNormal;
 in vec4 UVMapping;

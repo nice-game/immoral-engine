@@ -48,7 +48,7 @@ impl RenderState {
 
 				// instances
 				gl.EnableVertexArrayAttrib(vao[i], 0);
-				gl.VertexArrayAttribFormat(vao[i], 0, 1, gl::INT, gl::FALSE, 0);
+				gl.VertexArrayAttribFormat(vao[i], 0, 1, gl::FLOAT, gl::FALSE, 0);
 				gl.VertexArrayAttribBinding(vao[i], 0, 0);
 				gl.VertexArrayBindingDivisor(vao[i], 0, 1);
 				gl.VertexArrayVertexBuffer(vao[i], 0, allocs.instance_alloc.id, 0, size_of::<Instance>() as _);
@@ -59,7 +59,7 @@ impl RenderState {
 				gl.VertexArrayAttribBinding(vao[i], 1, 1);
 				gl.VertexArrayVertexBuffer(vao[i], 1, allocs.vert_alloc.id, 0, size_of::<Vertex>() as _);
 				if i >= 1 {
-					// rotations
+					// tangent frames
 					gl.EnableVertexArrayAttrib(vao[i], 2);
 					gl.VertexArrayAttribFormat(vao[i], 2, 4, gl::FLOAT, gl::FALSE, 12);
 					gl.VertexArrayAttribBinding(vao[i], 2, 1);
