@@ -1,6 +1,5 @@
 #version 420 core
 
-layout (location = 0) in int TextureIndex;
 layout (location = 1) in vec3 VertexPosition;
 layout (location = 2) in vec4 VertexRotation;
 layout (location = 3) in vec4 VertexUVMapping;

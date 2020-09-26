@@ -1,11 +1,19 @@
 #version 420 core
 
+layout (location = 0) flat in int TextureIndex;
+
 in vec3 WorldPosition;
 in vec3 WorldNormal;
 in vec4 UVMapping;
 
 out vec4 FragColor;
 
+uniform sampler2DArray tex;
+
 void main() {
-	FragColor = vec4(UVMapping.xy, 0.0, 1.0);
+	if (TextureIndex == -1) {
+		FragColor = vec4(1, 0.1, 0.1, 1);
+	} else {
+		FragColor = texture(tex, vec3(UVMapping.xy, TextureIndex));
+	}
 }

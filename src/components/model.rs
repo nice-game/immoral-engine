@@ -54,7 +54,6 @@ fn get_textures(file: &Path, scene: &Scene, alloc: &RenderAllocs) -> Vec<i32> {
 		.map(|p| {
 			if p.len() > 0 {
 				let path = file.join(p);
-				println!("{}", path.display());
 				let img = image::open(path).unwrap().to_rgba();
 				let (w, h) = img.dimensions();
 				let buf = alloc.alloc_other_slice(&img.into_raw());

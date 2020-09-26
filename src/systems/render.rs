@@ -120,6 +120,11 @@ impl RenderState {
 				size_of::<CameraUniform>() as _,
 			);
 
+			gl.UseProgram(shader);
+			gl.ActiveTexture(gl::TEXTURE0);
+			gl.BindTexture(gl::TEXTURE_2D_ARRAY, allocs.tex);
+			gl.Uniform1i(gl.GetUniformLocation(shader, "tex\0".as_ptr() as _), 0);
+
 			gl.BindBuffer(gl::DRAW_INDIRECT_BUFFER, allocs.other_alloc.id);
 
 			Self {
@@ -208,7 +213,7 @@ unsafe fn check_program(gl: &Gl, program: GLuint) {
 		let mut len = 0;
 		gl.GetProgramiv(program, gl::INFO_LOG_LENGTH, &mut len);
 		let mut info_log: String = repeat('\0').take(len as _).collect();
-		gl.GetShaderInfoLog(program, 512, ptr::null_mut(), info_log.as_mut_ptr() as _);
+		gl.GetProgramInfoLog(program, 512, ptr::null_mut(), info_log.as_mut_ptr() as _);
 		panic!("{:?}", info_log);
 	}
 }

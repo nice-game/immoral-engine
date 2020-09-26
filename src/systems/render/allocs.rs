@@ -41,7 +41,7 @@ impl RenderAllocs {
 	}
 
 	pub fn alloc_instance(&self, instance: &Instance) -> Buffer<Instance> {
-		Buffer::init(&self.idx_alloc).copy(instance)
+		Buffer::init(&self.instance_alloc).copy(instance)
 	}
 
 	pub fn alloc_other<T: Copy + 'static>(&self, data: &T) -> Buffer<T> {
