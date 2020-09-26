@@ -85,8 +85,7 @@ fn get_textures(file: &Path, scene: &Scene, alloc: &RenderAllocs) -> Vec<i32> {
 pub struct Mesh {
 	pub buf: Buffer<[Vertex]>,
 	indices: Buffer<[u16]>,
-	// -1 if no texture
-	pub texi: i32,
+	pub instance: Buffer<Instance>,
 }
 impl Mesh {
 	fn from_assimp(alloc: &Arc<RenderAllocs>, mesh: &AssimpMesh, texidxs: &[i32]) -> Self {
@@ -118,8 +117,9 @@ impl Mesh {
 
 		let buf = alloc.alloc_verts(&vertices);
 		let indices = alloc.alloc_indices(&indices);
+		let instance = alloc.alloc_instance(&Instance { tex: texidxs[mesh.material_index as usize] });
 
-		Self { buf, indices, texi: texidxs[mesh.material_index as usize] }
+		Self { buf, indices, instance }
 	}
 
 	pub fn index_offset(&self) -> GLint {
@@ -129,6 +129,13 @@ impl Mesh {
 	pub fn index_count(&self) -> usize {
 		self.indices.len()
 	}
+}
+
+#[allow(unused)]
+#[derive(Clone, Copy)]
+pub struct Instance {
+	/// -1 if no texture
+	tex: i32,
 }
 
 #[allow(unused)]

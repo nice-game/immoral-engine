@@ -14,6 +14,7 @@ use shipyard::{IntoIter, UniqueView, UniqueViewMut, View};
 use std::{ffi::CString, iter::repeat, mem::size_of, ptr, sync::Arc};
 
 #[derive(Clone, Copy, Default)]
+#[repr(C)]
 pub struct RenderSysDrawCommand {
 	count: u32,
 	instance_count: u32,
@@ -141,10 +142,10 @@ pub fn render(mut state: UniqueViewMut<RenderState>, player: UniqueView<PlayerCo
 		for model in models.iter() {
 			for mesh in &model.meshes {
 				cmd[cmd_counter].count = mesh.index_count() as u32;
-				cmd[cmd_counter].instance_count = 1 as u32;
+				cmd[cmd_counter].instance_count = 1;
 				cmd[cmd_counter].first_index = mesh.index_offset() as u32;
 				cmd[cmd_counter].base_vertex = mesh.buf.offset() as u32;
-				cmd[cmd_counter].base_instance = 0 as u32;
+				cmd[cmd_counter].base_instance = 0;
 				cmd_counter += 1;
 			}
 		}
