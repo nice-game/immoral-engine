@@ -2,7 +2,7 @@ pub mod allocs;
 
 use crate::{
 	components::{
-		model::{Model, Vertex},
+		model::{Instance, Model, Vertex},
 		player_controller::PlayerController,
 	},
 	glrs::buffer::Buffer,
@@ -46,34 +46,41 @@ impl RenderState {
 				// index buffer
 				gl.VertexArrayElementBuffer(vao[i], allocs.idx_alloc.id);
 
-				// positions
+				// instances
 				gl.EnableVertexArrayAttrib(vao[i], 0);
-				gl.VertexArrayAttribFormat(vao[i], 0, vsize[i], gl::FLOAT, gl::FALSE, 0);
+				gl.VertexArrayAttribFormat(vao[i], 0, 1, gl::INT, gl::FALSE, 0);
 				gl.VertexArrayAttribBinding(vao[i], 0, 0);
-				gl.VertexArrayVertexBuffer(vao[i], 0, allocs.vert_alloc.id, 0, size_of::<Vertex>() as _);
+				gl.VertexArrayBindingDivisor(vao[i], 0, 1);
+				gl.VertexArrayVertexBuffer(vao[i], 0, allocs.instance_alloc.id, 0, size_of::<Instance>() as _);
+
+				// positions
+				gl.EnableVertexArrayAttrib(vao[i], 1);
+				gl.VertexArrayAttribFormat(vao[i], 1, vsize[i], gl::FLOAT, gl::FALSE, 0);
+				gl.VertexArrayAttribBinding(vao[i], 1, 1);
+				gl.VertexArrayVertexBuffer(vao[i], 1, allocs.vert_alloc.id, 0, size_of::<Vertex>() as _);
 				if i >= 1 {
 					// rotations
-					gl.EnableVertexArrayAttrib(vao[i], 1);
-					gl.VertexArrayAttribFormat(vao[i], 1, 4, gl::FLOAT, gl::FALSE, 12);
-					gl.VertexArrayAttribBinding(vao[i], 1, 0);
-					gl.VertexArrayVertexBuffer(vao[i], 1, allocs.vert_alloc.id, 0, size_of::<Vertex>() as _);
-					// texcoords
 					gl.EnableVertexArrayAttrib(vao[i], 2);
-					gl.VertexArrayAttribFormat(vao[i], 2, 4, gl::FLOAT, gl::FALSE, 28);
-					gl.VertexArrayAttribBinding(vao[i], 2, 0);
+					gl.VertexArrayAttribFormat(vao[i], 2, 4, gl::FLOAT, gl::FALSE, 12);
+					gl.VertexArrayAttribBinding(vao[i], 2, 1);
 					gl.VertexArrayVertexBuffer(vao[i], 2, allocs.vert_alloc.id, 0, size_of::<Vertex>() as _);
+					// texcoords
+					gl.EnableVertexArrayAttrib(vao[i], 3);
+					gl.VertexArrayAttribFormat(vao[i], 3, 4, gl::FLOAT, gl::FALSE, 28);
+					gl.VertexArrayAttribBinding(vao[i], 3, 1);
+					gl.VertexArrayVertexBuffer(vao[i], 3, allocs.vert_alloc.id, 0, size_of::<Vertex>() as _);
 				}
 				if i >= 2 {
 					// bone ids
-					gl.EnableVertexArrayAttrib(vao[i], 3);
-					gl.VertexArrayAttribFormat(vao[i], 3, 4, gl::UNSIGNED_BYTE, gl::FALSE, 44);
-					gl.VertexArrayAttribBinding(vao[i], 3, 0);
-					gl.VertexArrayVertexBuffer(vao[i], 3, allocs.vert_alloc.id, 0, size_of::<Vertex>() as _);
-					// bone weights
 					gl.EnableVertexArrayAttrib(vao[i], 4);
-					gl.VertexArrayAttribFormat(vao[i], 4, 4, gl::UNSIGNED_BYTE, gl::TRUE, 48);
-					gl.VertexArrayAttribBinding(vao[i], 4, 0);
+					gl.VertexArrayAttribFormat(vao[i], 4, 4, gl::UNSIGNED_BYTE, gl::FALSE, 44);
+					gl.VertexArrayAttribBinding(vao[i], 4, 1);
 					gl.VertexArrayVertexBuffer(vao[i], 4, allocs.vert_alloc.id, 0, size_of::<Vertex>() as _);
+					// bone weights
+					gl.EnableVertexArrayAttrib(vao[i], 5);
+					gl.VertexArrayAttribFormat(vao[i], 5, 4, gl::UNSIGNED_BYTE, gl::TRUE, 48);
+					gl.VertexArrayAttribBinding(vao[i], 5, 1);
+					gl.VertexArrayVertexBuffer(vao[i], 5, allocs.vert_alloc.id, 0, size_of::<Vertex>() as _);
 				}
 			}
 
@@ -145,7 +152,7 @@ pub fn render(mut state: UniqueViewMut<RenderState>, player: UniqueView<PlayerCo
 				cmd[cmd_counter].instance_count = 1;
 				cmd[cmd_counter].first_index = mesh.index_offset() as u32;
 				cmd[cmd_counter].base_vertex = mesh.buf.offset() as u32;
-				cmd[cmd_counter].base_instance = 0;
+				cmd[cmd_counter].base_instance = mesh.instance.offset() as u32;
 				cmd_counter += 1;
 			}
 		}
@@ -168,7 +175,15 @@ pub fn render(mut state: UniqueViewMut<RenderState>, player: UniqueView<PlayerCo
 		for model in models.iter() {
 			for mesh in &model.meshes {
 				gl.BindVertexArray(state.vao[1]);
-				gl.DrawElements(gl::TRIANGLES, mesh.index_count() as _, gl::UNSIGNED_SHORT, mesh.index_offset() as _);
+				gl.DrawElementsInstancedBaseVertexBaseInstance(
+					gl::TRIANGLES,
+					mesh.index_count() as _,
+					gl::UNSIGNED_SHORT,
+					mesh.index_offset() as _,
+					1,
+					(mesh.buf.offset() as usize / size_of::<Vertex>()) as _,
+					(mesh.instance.offset() as usize / size_of::<Instance>()) as _,
+				);
 			}
 		}
 	}

@@ -1,10 +1,11 @@
 #version 420 core
 
-layout (location = 0) in vec3 VertexPosition;
-layout (location = 1) in vec4 VertexRotation;
-layout (location = 2) in vec4 VertexUVMapping;
-layout (location = 3) in vec4 VertexBoneIDs;
-layout (location = 4) in vec4 VertexBoneWeights;
+layout (location = 0) in int TextureIndex;
+layout (location = 1) in vec3 VertexPosition;
+layout (location = 2) in vec4 VertexRotation;
+layout (location = 3) in vec4 VertexUVMapping;
+layout (location = 4) in vec4 VertexBoneIDs;
+layout (location = 5) in vec4 VertexBoneWeights;
 
 out vec3 WorldPosition;
 out vec3 WorldNormal;
