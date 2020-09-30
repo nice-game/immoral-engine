@@ -17,9 +17,12 @@ pub struct RenderAllocs {
 impl RenderAllocs {
 	pub fn new(ctx: &Arc<Ctx>) -> Arc<Self> {
 		let mut tex = 0;
+		let gl = &ctx.gl;
 		unsafe {
-			ctx.gl.CreateTextures(gl::TEXTURE_2D_ARRAY, 1, &mut tex);
-			ctx.gl.TextureStorage3D(tex, 1, gl::RGBA8, 1024, 1024, 64);
+			gl.CreateTextures(gl::TEXTURE_2D_ARRAY, 1, &mut tex);
+			gl.TextureStorage3D(tex, 1, gl::RGBA8, 1024, 1024, 64);
+			gl.TextureParameteri(tex, gl::TEXTURE_MIN_FILTER, gl::LINEAR as _);
+			gl.TextureParameteri(tex, gl::TEXTURE_MAG_FILTER, gl::LINEAR as _);
 		}
 
 		Arc::new(Self {

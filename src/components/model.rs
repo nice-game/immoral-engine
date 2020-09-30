@@ -49,30 +49,27 @@ fn get_textures(file: &Path, scene: &Scene, alloc: &RenderAllocs) -> Vec<f32> {
 				ptr::null_mut(),
 				ptr::null_mut(),
 			);
-			str::from_utf8_unchecked(slice::from_raw_parts(path.data.as_ptr(), path.length)).to_owned()
-		})
-		.map(|p| {
-			if p.len() > 0 {
-				let path = file.join(p);
+			let path = str::from_utf8_unchecked(slice::from_raw_parts(path.data.as_ptr(), path.length)).to_owned();
+
+			if path.len() > 0 {
+				let path = file.join(path);
 				let img = image::open(path).unwrap().to_rgba();
 				let (w, h) = img.dimensions();
 				let buf = alloc.alloc_other_slice(&img.into_raw());
 				let idx = alloc.tex_free.fetch_add(1, Ordering::Relaxed);
-				unsafe {
-					gl.TextureSubImage3D(
-						alloc.tex,
-						0,
-						0,
-						0,
-						idx,
-						w as _,
-						h as _,
-						1,
-						gl::RGBA,
-						gl::UNSIGNED_BYTE,
-						buf.offset() as _,
-					)
-				};
+				gl.TextureSubImage3D(
+					alloc.tex,
+					0,
+					0,
+					0,
+					idx,
+					w as _,
+					h as _,
+					1,
+					gl::RGBA,
+					gl::UNSIGNED_BYTE,
+					buf.offset() as _,
+				);
 				idx as f32
 			} else {
 				-1.0
@@ -132,6 +129,7 @@ impl Mesh {
 
 #[allow(unused)]
 #[derive(Clone, Copy)]
+#[repr(C)]
 pub struct Instance {
 	/// -1 if no texture
 	tex: f32,
@@ -139,6 +137,7 @@ pub struct Instance {
 
 #[allow(unused)]
 #[derive(Clone, Copy)]
+#[repr(C)]
 pub struct Vertex {
 	pos: Vector3<f32>,
 	rot: UnitQuaternion<f32>,
@@ -147,6 +146,7 @@ pub struct Vertex {
 
 #[allow(unused)]
 #[derive(Clone, Copy)]
+#[repr(C)]
 pub struct VertexRigged {
 	pos: Vector3<f32>,
 	rot: UnitQuaternion<f32>,
