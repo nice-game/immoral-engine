@@ -58,7 +58,7 @@ fn get_textures(file: &Path, scene: &Scene, alloc: &RenderAllocs) -> Vec<f32> {
 				let buf = alloc.alloc_other_slice(&img.into_raw());
 				let idx = alloc.tex_free.fetch_add(1, Ordering::Relaxed);
 				gl.TextureSubImage3D(
-					alloc.tex,
+					alloc.tex.handle(),
 					0,
 					0,
 					0,

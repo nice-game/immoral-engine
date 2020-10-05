@@ -1,9 +1,9 @@
 use crate::{
 	components::model::Instance,
+	glrs::texture::{Filter, Texture},
 	systems::render::{Buffer, Vertex},
 	Allocator, Ctx,
 };
-use gl::types::GLuint;
 use std::sync::{atomic::AtomicI32, Arc};
 
 pub struct RenderAllocs {
@@ -11,19 +11,14 @@ pub struct RenderAllocs {
 	pub idx_alloc: Arc<Allocator>,
 	pub instance_alloc: Arc<Allocator>,
 	pub other_alloc: Arc<Allocator>,
-	pub tex: GLuint,
+	pub tex: Texture,
 	pub tex_free: AtomicI32,
 }
 impl RenderAllocs {
 	pub fn new(ctx: &Arc<Ctx>) -> Arc<Self> {
-		let mut tex = 0;
-		let gl = &ctx.gl;
-		unsafe {
-			gl.CreateTextures(gl::TEXTURE_2D_ARRAY, 1, &mut tex);
-			gl.TextureStorage3D(tex, 1, gl::RGBA8, 1024, 1024, 64);
-			gl.TextureParameteri(tex, gl::TEXTURE_MIN_FILTER, gl::LINEAR as _);
-			gl.TextureParameteri(tex, gl::TEXTURE_MAG_FILTER, gl::LINEAR as _);
-		}
+		let tex = Texture::new_3d(ctx, 1024, 1024, 64);
+		tex.min_filter(Filter::Linear);
+		tex.mag_filter(Filter::Linear);
 
 		Arc::new(Self {
 			vert_alloc: Allocator::new(ctx, true),
