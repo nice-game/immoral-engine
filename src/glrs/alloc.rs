@@ -1,4 +1,4 @@
-use crate::Ctx;
+use crate::glrs::ctx::Ctx;
 use gl::types::GLuint;
 use std::{
 	ptr, slice,

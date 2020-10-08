@@ -5,7 +5,7 @@ use crate::{
 		model::{Instance, Model, Vertex},
 		player_controller::PlayerController,
 	},
-	glrs::buffer::Buffer,
+	glrs::{buffer::Buffer, texture::Texture},
 	types::camera::CameraUniform,
 	RenderAllocs,
 };
@@ -38,9 +38,12 @@ impl RenderState {
 		let ctx = allocs.ctx();
 		let gl = &ctx.gl;
 
+		let mut fbo = 0;
 		let mut vao = [0, 0, 0];
 		let vsize = [2, 3, 3];
 		unsafe {
+			gl.CreateFramebuffers(1, &mut fbo);
+
 			gl.CreateVertexArrays(3, vao.as_mut_ptr());
 			for i in 0..3 {
 				// index buffer
@@ -116,13 +119,13 @@ impl RenderState {
 				gl::UNIFORM_BUFFER,
 				camidx,
 				allocs.other_alloc.id,
-				cambuf.offset(),
+				cambuf.offset() as _,
 				size_of::<CameraUniform>() as _,
 			);
 
 			gl.UseProgram(shader);
 			gl.ActiveTexture(gl::TEXTURE0);
-			gl.BindTexture(gl::TEXTURE_2D_ARRAY, allocs.tex);
+			gl.BindTexture(gl::TEXTURE_2D_ARRAY, allocs.tex.handle());
 			gl.Uniform1i(gl.GetUniformLocation(shader, "tex\0".as_ptr() as _), 0);
 
 			gl.BindBuffer(gl::DRAW_INDIRECT_BUFFER, allocs.other_alloc.id);

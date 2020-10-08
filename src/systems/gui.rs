@@ -1,4 +1,4 @@
-use crate::Ctx;
+use crate::glrs::ctx::Ctx;
 use glutin::event::{ElementState, VirtualKeyCode, WindowEvent};
 use shipyard::UniqueView;
 use std::sync::Arc;

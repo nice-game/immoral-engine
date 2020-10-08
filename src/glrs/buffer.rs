@@ -33,8 +33,8 @@ impl<T: Copy + 'static> Buffer<[T]> {
 	}
 }
 impl<T: ?Sized> Buffer<T> {
-	pub fn offset(&self) -> isize {
-		self.mem.offset as _
+	pub fn offset(&self) -> usize {
+		self.mem.offset
 	}
 }
 impl<T: Copy + 'static> Deref for Buffer<T> {

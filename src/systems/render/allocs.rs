@@ -1,8 +1,11 @@
 use crate::{
 	components::model::Instance,
-	glrs::texture::{Filter, Texture},
+	glrs::{
+		ctx::Ctx,
+		texture::{Filter, Texture, Texture3D},
+	},
 	systems::render::{Buffer, Vertex},
-	Allocator, Ctx,
+	Allocator,
 };
 use std::sync::{atomic::AtomicI32, Arc};
 
@@ -11,12 +14,12 @@ pub struct RenderAllocs {
 	pub idx_alloc: Arc<Allocator>,
 	pub instance_alloc: Arc<Allocator>,
 	pub other_alloc: Arc<Allocator>,
-	pub tex: Texture,
+	pub tex: Texture3D,
 	pub tex_free: AtomicI32,
 }
 impl RenderAllocs {
 	pub fn new(ctx: &Arc<Ctx>) -> Arc<Self> {
-		let tex = Texture::new_3d(ctx, 1024, 1024, 64);
+		let tex = Texture3D::new(ctx, 1024, 1024, 64);
 		tex.min_filter(Filter::Linear);
 		tex.mag_filter(Filter::Linear);
 

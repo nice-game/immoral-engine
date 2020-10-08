@@ -30,9 +30,6 @@ impl Model {
 }
 
 fn get_textures(file: &Path, scene: &Scene, alloc: &RenderAllocs) -> Vec<f32> {
-	let gl = &alloc.ctx().gl;
-	unsafe { gl.BindBuffer(gl::PIXEL_UNPACK_BUFFER, alloc.other_alloc.id) };
-
 	scene
 		.material_iter()
 		.map(|m| unsafe {
@@ -57,19 +54,7 @@ fn get_textures(file: &Path, scene: &Scene, alloc: &RenderAllocs) -> Vec<f32> {
 				let (w, h) = img.dimensions();
 				let buf = alloc.alloc_other_slice(&img.into_raw());
 				let idx = alloc.tex_free.fetch_add(1, Ordering::Relaxed);
-				gl.TextureSubImage3D(
-					alloc.tex.handle(),
-					0,
-					0,
-					0,
-					idx,
-					w as _,
-					h as _,
-					1,
-					gl::RGBA,
-					gl::UNSIGNED_BYTE,
-					buf.offset() as _,
-				);
+				alloc.tex.subimage_u8([0, 0, idx], [w as _, h as _, 1], gl::RGBA, &buf);
 				idx as f32
 			} else {
 				-1.0
