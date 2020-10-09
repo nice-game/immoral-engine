@@ -56,6 +56,11 @@ impl Allocator {
 		(n + self.align - 1) / self.align * self.align
 	}
 }
+impl Drop for Allocator {
+	fn drop(&mut self) {
+		unsafe { self.ctx.gl.DeleteBuffers(1, &self.id) };
+	}
+}
 
 pub struct Allocation {
 	pub alloc: Arc<Allocator>,

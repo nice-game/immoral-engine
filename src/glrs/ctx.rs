@@ -1,3 +1,4 @@
+use crate::glrs::framebuffer::DefaultFramebuffer;
 use gl::{types::GLenum, Gl};
 use glutin::{
 	event_loop::EventLoop,
@@ -26,6 +27,10 @@ impl Ctx {
 		assert_eq!(unsafe { gl.GetError() }, 0);
 
 		Arc::new(Self { window, gl, grab: AtomicBool::default(), quit: AtomicBool::default() })
+	}
+
+	pub fn default_framebuffer(self: &Arc<Self>) -> DefaultFramebuffer {
+		DefaultFramebuffer::new(self)
 	}
 
 	pub fn window(&self) -> &ContextWrapper<PossiblyCurrent, Window> {

@@ -7,7 +7,7 @@ mod types;
 
 use crate::{
 	components::{model::Model, player_controller::PlayerController},
-	glrs::{alloc::Allocator, ctx::Ctx},
+	glrs::{alloc::Allocator, ctx::Ctx, framebuffer::Framebuffer},
 	systems::{
 		gui::update_gui,
 		player::update_player,
@@ -39,8 +39,6 @@ fn main() {
 
 	world.add_workload("").with_system(system!(update_gui)).with_system(system!(update_player)).build();
 
-	ctx.clear_color(0.1, 0.1, 0.1, 1.0);
-
 	let mut last_instant = Instant::now();
 
 	let window_events: Vec<WindowEvent> = vec![];
@@ -60,7 +58,7 @@ fn main() {
 			},
 			Event::DeviceEvent { event, .. } => world.run(|events| push_device_event(event, events)),
 			Event::MainEventsCleared => {
-				ctx.clear(gl::COLOR_BUFFER_BIT);
+				ctx.default_framebuffer().clear_color(0.1, 0.1, 0.1, 1.0);
 
 				world.run(|mut delta: UniqueViewMut<Duration>| {
 					let now = Instant::now();

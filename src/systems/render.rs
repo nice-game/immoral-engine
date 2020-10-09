@@ -38,12 +38,9 @@ impl RenderState {
 		let ctx = allocs.ctx();
 		let gl = &ctx.gl;
 
-		let mut fbo = 0;
 		let mut vao = [0, 0, 0];
 		let vsize = [2, 3, 3];
 		unsafe {
-			gl.CreateFramebuffers(1, &mut fbo);
-
 			gl.CreateVertexArrays(3, vao.as_mut_ptr());
 			for i in 0..3 {
 				// index buffer
