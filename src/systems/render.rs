@@ -10,20 +10,81 @@ use crate::{
 	RenderAllocs,
 };
 use gl::{types::GLuint, Gl};
-use shipyard::{IntoIter, NonSendSync, UniqueView, UniqueViewMut, View};
-use std::{ffi::CString, iter::repeat, mem::size_of, ptr, sync::Arc};
+use shipyard::{IntoIter, NonSendSync, UniqueView, UniqueViewMut, View, World};
+use std::{ffi::CString, iter::repeat, mem::size_of, ptr, rc::Rc};
+
+pub fn render_init(world: &World, allocs: &Rc<RenderAllocs>) {
+	world.add_unique_non_send_sync(RenderState::new(allocs));
+}
+
+pub fn render(
+	mut state: NonSendSync<UniqueViewMut<RenderState>>,
+	player: UniqueView<PlayerController>,
+	models: NonSendSync<View<Model>>,
+) {
+	state.cambuf.copy(&player.cam.uniform);
+
+	unsafe {
+		let gl = &state.allocs.ctx().gl;
+		gl.UseProgram(state.shader);
+
+		let mut cmd_counter = 0;
+		let cmd = if !state.cmd_phase { &mut state.cmd_a } else { &mut state.cmd_b };
+		for model in models.iter() {
+			for mesh in &model.meshes {
+				cmd[cmd_counter].count = mesh.index_count() as u32;
+				cmd[cmd_counter].instance_count = 1;
+				cmd[cmd_counter].first_index = mesh.index_offset() as u32;
+				cmd[cmd_counter].base_vertex = mesh.buf.offset() as u32;
+				cmd[cmd_counter].base_instance = mesh.instance.offset() as u32;
+				cmd_counter += 1;
+			}
+		}
+		if !state.cmd_phase {
+			state.cmd_a_length = cmd_counter;
+			state.cmd_phase = false;
+		} else {
+			state.cmd_b_length = cmd_counter;
+			state.cmd_phase = true;
+		}
+		let gl = &state.allocs.ctx().gl;
+		// gl.BindVertexArray(state.vao[1]);
+		// gl.MultiDrawElementsIndirect(
+		// gl::TRIANGLES,
+		// gl::UNSIGNED_SHORT,
+		// if state.cmd_phase {state.cmd_a.offset()} else {state.cmd_b.offset()} as _,
+		// if state.cmd_phase {state.cmd_a_length} else {state.cmd_b_length} as _,
+		// 0,
+		// );
+		for model in models.iter() {
+			for mesh in &model.meshes {
+				gl.BindVertexArray(state.vao[1]);
+				gl.DrawElementsInstancedBaseVertexBaseInstance(
+					gl::TRIANGLES,
+					mesh.index_count() as _,
+					gl::UNSIGNED_SHORT,
+					mesh.index_offset() as _,
+					1,
+					(mesh.buf.offset() as usize / size_of::<Vertex>()) as _,
+					(mesh.instance.offset() as usize / size_of::<Instance>()) as _,
+				);
+			}
+		}
+	}
+}
 
 #[derive(Clone, Copy, Default)]
 #[repr(C)]
-pub struct RenderSysDrawCommand {
+struct RenderSysDrawCommand {
 	count: u32,
 	instance_count: u32,
 	first_index: u32,
 	base_vertex: u32,
 	base_instance: u32,
 }
+
 pub struct RenderState {
-	allocs: Arc<RenderAllocs>,
+	allocs: Rc<RenderAllocs>,
 	vao: [GLuint; 3],
 	shader: GLuint,
 	cambuf: Buffer<CameraUniform>,
@@ -34,7 +95,7 @@ pub struct RenderState {
 	cmd_phase: bool,
 }
 impl RenderState {
-	pub fn new(allocs: &Arc<RenderAllocs>) -> Self {
+	fn new(allocs: &Rc<RenderAllocs>) -> Self {
 		let ctx = allocs.ctx();
 		let gl = &ctx.gl;
 
@@ -137,62 +198,6 @@ impl RenderState {
 				cmd_a_length: 0,
 				cmd_b_length: 0,
 				cmd_phase: false,
-			}
-		}
-	}
-}
-
-pub fn render(
-	mut state: NonSendSync<UniqueViewMut<RenderState>>,
-	player: UniqueView<PlayerController>,
-	models: NonSendSync<View<Model>>,
-) {
-	state.cambuf.copy(&player.cam.uniform);
-
-	unsafe {
-		let gl = &state.allocs.ctx().gl;
-		gl.UseProgram(state.shader);
-
-		let mut cmd_counter = 0;
-		let cmd = if !state.cmd_phase { &mut state.cmd_a } else { &mut state.cmd_b };
-		for model in models.iter() {
-			for mesh in &model.meshes {
-				cmd[cmd_counter].count = mesh.index_count() as u32;
-				cmd[cmd_counter].instance_count = 1;
-				cmd[cmd_counter].first_index = mesh.index_offset() as u32;
-				cmd[cmd_counter].base_vertex = mesh.buf.offset() as u32;
-				cmd[cmd_counter].base_instance = mesh.instance.offset() as u32;
-				cmd_counter += 1;
-			}
-		}
-		if !state.cmd_phase {
-			state.cmd_a_length = cmd_counter;
-			state.cmd_phase = false;
-		} else {
-			state.cmd_b_length = cmd_counter;
-			state.cmd_phase = true;
-		}
-		let gl = &state.allocs.ctx().gl;
-		// gl.BindVertexArray(state.vao[1]);
-		// gl.MultiDrawElementsIndirect(
-		// gl::TRIANGLES,
-		// gl::UNSIGNED_SHORT,
-		// if state.cmd_phase {state.cmd_a.offset()} else {state.cmd_b.offset()} as _,
-		// if state.cmd_phase {state.cmd_a_length} else {state.cmd_b_length} as _,
-		// 0,
-		// );
-		for model in models.iter() {
-			for mesh in &model.meshes {
-				gl.BindVertexArray(state.vao[1]);
-				gl.DrawElementsInstancedBaseVertexBaseInstance(
-					gl::TRIANGLES,
-					mesh.index_count() as _,
-					gl::UNSIGNED_SHORT,
-					mesh.index_offset() as _,
-					1,
-					(mesh.buf.offset() as usize / size_of::<Vertex>()) as _,
-					(mesh.instance.offset() as usize / size_of::<Instance>()) as _,
-				);
 			}
 		}
 	}

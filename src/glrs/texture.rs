@@ -1,6 +1,6 @@
 use crate::{glrs::buffer::Buffer, Ctx};
 use gl::types::{GLenum, GLint, GLsizei, GLuint};
-use std::sync::Arc;
+use std::rc::Rc;
 
 pub trait Texture {
 	fn handle(&self) -> GLuint;
@@ -9,11 +9,11 @@ pub trait Texture {
 }
 
 pub struct Texture3D {
-	ctx: Arc<Ctx>,
+	ctx: Rc<Ctx>,
 	handle: GLuint,
 }
 impl Texture3D {
-	pub fn new(ctx: &Arc<Ctx>, width: GLsizei, height: GLsizei, depth: GLsizei) -> Texture3D {
+	pub fn new(ctx: &Rc<Ctx>, width: GLsizei, height: GLsizei, depth: GLsizei) -> Texture3D {
 		let gl = &ctx.gl;
 		let mut handle = 0;
 		unsafe {

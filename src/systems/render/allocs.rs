@@ -7,23 +7,23 @@ use crate::{
 	systems::render::{Buffer, Vertex},
 	Allocator,
 };
-use std::sync::{atomic::AtomicI32, Arc};
+use std::{rc::Rc, sync::atomic::AtomicI32};
 
 pub struct RenderAllocs {
-	pub vert_alloc: Arc<Allocator>,
-	pub idx_alloc: Arc<Allocator>,
-	pub instance_alloc: Arc<Allocator>,
-	pub other_alloc: Arc<Allocator>,
+	pub vert_alloc: Rc<Allocator>,
+	pub idx_alloc: Rc<Allocator>,
+	pub instance_alloc: Rc<Allocator>,
+	pub other_alloc: Rc<Allocator>,
 	pub tex: Texture3D,
 	pub tex_free: AtomicI32,
 }
 impl RenderAllocs {
-	pub fn new(ctx: &Arc<Ctx>) -> Arc<Self> {
+	pub fn new(ctx: &Rc<Ctx>) -> Rc<Self> {
 		let tex = Texture3D::new(ctx, 1024, 1024, 64);
 		tex.min_filter(Filter::Linear);
 		tex.mag_filter(Filter::Linear);
 
-		Arc::new(Self {
+		Rc::new(Self {
 			vert_alloc: Allocator::new(ctx, true),
 			idx_alloc: Allocator::new(ctx, true),
 			instance_alloc: Allocator::new(ctx, true),
@@ -53,7 +53,7 @@ impl RenderAllocs {
 		Buffer::init_slice(&self.other_alloc, data.len()).copy_from_slice(data)
 	}
 
-	pub fn ctx(&self) -> &Arc<Ctx> {
+	pub fn ctx(&self) -> &Rc<Ctx> {
 		&self.vert_alloc.ctx
 	}
 }

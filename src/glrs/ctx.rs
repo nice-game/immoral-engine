@@ -5,14 +5,14 @@ use glutin::{
 	window::{Window, WindowBuilder},
 	ContextBuilder, ContextWrapper, GlProfile, PossiblyCurrent,
 };
-use std::sync::Arc;
+use std::rc::Rc;
 
 pub struct Ctx {
 	window: ContextWrapper<PossiblyCurrent, Window>,
 	pub gl: Gl,
 }
 impl Ctx {
-	pub fn new(event_loop: &EventLoop<()>) -> Arc<Self> {
+	pub fn new(event_loop: &EventLoop<()>) -> Rc<Self> {
 		let window = WindowBuilder::new();
 		let window =
 			ContextBuilder::new().with_gl_profile(GlProfile::Core).build_windowed(window, &event_loop).unwrap();
@@ -21,10 +21,10 @@ impl Ctx {
 		let gl = Gl::load_with(|ptr| window.get_proc_address(ptr) as *const _);
 		assert_eq!(unsafe { gl.GetError() }, 0);
 
-		Arc::new(Self { window, gl })
+		Rc::new(Self { window, gl })
 	}
 
-	pub fn default_framebuffer(self: &Arc<Self>) -> DefaultFramebuffer {
+	pub fn default_framebuffer(self: &Rc<Self>) -> DefaultFramebuffer {
 		DefaultFramebuffer::new(self)
 	}
 

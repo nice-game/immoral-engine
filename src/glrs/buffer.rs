@@ -3,8 +3,8 @@ use std::{
 	marker::PhantomData,
 	mem::size_of,
 	ops::{Deref, DerefMut},
+	rc::Rc,
 	slice,
-	sync::Arc,
 };
 
 pub struct Buffer<T: ?Sized> {
@@ -12,7 +12,7 @@ pub struct Buffer<T: ?Sized> {
 	phantom: PhantomData<T>,
 }
 impl<T: Copy + 'static> Buffer<T> {
-	pub fn init(alloc: &Arc<Allocator>) -> BufferInit<T> {
+	pub fn init(alloc: &Rc<Allocator>) -> BufferInit<T> {
 		let mem = alloc.alloc(size_of::<T>());
 		BufferInit { buf: Self { mem, phantom: PhantomData } }
 	}
@@ -23,7 +23,7 @@ impl<T: Copy + 'static> Buffer<T> {
 	}
 }
 impl<T: Copy + 'static> Buffer<[T]> {
-	pub fn init_slice(alloc: &Arc<Allocator>, len: usize) -> BufferInit<[T]> {
+	pub fn init_slice(alloc: &Rc<Allocator>, len: usize) -> BufferInit<[T]> {
 		let mem = alloc.alloc(size_of::<T>() * len);
 		BufferInit { buf: Self { mem, phantom: PhantomData } }
 	}

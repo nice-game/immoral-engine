@@ -1,22 +1,21 @@
 use crate::glrs::ctx::Ctx;
 use gl::types::GLuint;
 use std::{
-	ptr, slice,
-	sync::{
-		atomic::{AtomicUsize, Ordering},
-		Arc,
-	},
+	ptr,
+	rc::Rc,
+	slice,
+	sync::atomic::{AtomicUsize, Ordering},
 };
 
 pub struct Allocator {
-	pub ctx: Arc<Ctx>,
+	pub ctx: Rc<Ctx>,
 	pub id: GLuint,
 	buf: &'static [u8],
 	align: usize,
 	free: AtomicUsize,
 }
 impl Allocator {
-	pub fn new(ctx: &Arc<Ctx>, pack: bool) -> Arc<Self> {
+	pub fn new(ctx: &Rc<Ctx>, pack: bool) -> Rc<Self> {
 		let size = 32 * 1024 * 1024;
 
 		let mut id = !0;
@@ -44,10 +43,10 @@ impl Allocator {
 			}
 		}
 
-		Arc::new(Self { ctx: ctx.clone(), id, buf, align: align as _, free: AtomicUsize::new(0) })
+		Rc::new(Self { ctx: ctx.clone(), id, buf, align: align as _, free: AtomicUsize::new(0) })
 	}
 
-	pub fn alloc(self: &Arc<Self>, size: usize) -> Allocation {
+	pub fn alloc(self: &Rc<Self>, size: usize) -> Allocation {
 		let offset = self.free.fetch_add(self.round_up(size), Ordering::Relaxed);
 		Allocation { alloc: self.clone(), offset, size }
 	}
@@ -63,7 +62,7 @@ impl Drop for Allocator {
 }
 
 pub struct Allocation {
-	pub alloc: Arc<Allocator>,
+	pub alloc: Rc<Allocator>,
 	pub offset: usize,
 	pub size: usize,
 }

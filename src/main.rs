@@ -11,7 +11,7 @@ use crate::{
 	systems::{
 		gui::update_gui,
 		player::update_player,
-		render::{allocs::RenderAllocs, render, RenderState},
+		render::{allocs::RenderAllocs, render, render_init},
 	},
 };
 use glutin::{
@@ -29,10 +29,11 @@ fn main() {
 	let world = World::new();
 	world.add_unique(Application::default());
 	world.add_unique(PlayerController::new());
-	world.add_unique_non_send_sync(RenderState::new(&allocs));
 	world.run(|mut entities: EntitiesViewMut, mut models: NonSendSync<ViewMut<Model>>| {
 		entities.add_entity(&mut *models, Model::from_file(&allocs, "assets/baldman.dae"));
 	});
+
+	render_init(&world, &allocs);
 
 	world
 		.add_workload("")
@@ -43,11 +44,9 @@ fn main() {
 
 	let mut last_instant = Instant::now();
 
-	let window_events: Vec<WindowEvent> = vec![];
-	let device_events: Vec<DeviceEvent> = vec![];
-	world.add_unique(window_events.clone());
-	world.add_unique(device_events.clone());
-	world.add_unique(Instant::now() - last_instant);
+	world.add_unique(Vec::<WindowEvent>::new());
+	world.add_unique(Vec::<DeviceEvent>::new());
+	world.add_unique(Duration::new(0, 0));
 
 	event_loop.run(move |event, _window, control| {
 		*control = ControlFlow::Poll;

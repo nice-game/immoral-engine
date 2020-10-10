@@ -3,19 +3,13 @@ use assimp::{Importer, Mesh as AssimpMesh, Scene, Vector3D};
 use assimp_sys::{aiGetMaterialTexture, AiString, AiTextureType};
 use gl::types::GLint;
 use nalgebra::{UnitQuaternion, Vector3, Vector4};
-use std::{
-	iter::repeat,
-	mem::size_of,
-	path::Path,
-	ptr, slice, str,
-	sync::{atomic::Ordering, Arc},
-};
+use std::{iter::repeat, mem::size_of, path::Path, ptr, rc::Rc, slice, str, sync::atomic::Ordering};
 
 pub struct Model {
 	pub meshes: Vec<Mesh>,
 }
 impl Model {
-	pub fn from_file(alloc: &Arc<RenderAllocs>, file: &str) -> Self {
+	pub fn from_file(alloc: &Rc<RenderAllocs>, file: &str) -> Self {
 		let mut importer = Importer::new();
 		importer.triangulate(true);
 		let scene = importer.read_file(file).unwrap();
@@ -69,7 +63,7 @@ pub struct Mesh {
 	pub instance: Buffer<Instance>,
 }
 impl Mesh {
-	fn from_assimp(alloc: &Arc<RenderAllocs>, mesh: &AssimpMesh, texidxs: &[f32]) -> Self {
+	fn from_assimp(alloc: &Rc<RenderAllocs>, mesh: &AssimpMesh, texidxs: &[f32]) -> Self {
 		let texcoords = if mesh.get_num_uv_channels() > 1 {
 			Box::new(mesh.texture_coords_iter(1)) as Box<dyn Iterator<Item = Vector3D>>
 		} else {
