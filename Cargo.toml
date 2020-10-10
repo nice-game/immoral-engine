@@ -15,5 +15,5 @@ gl = { path = "lib/gl" }
 glutin = "0.24.1"
 image = "0.23.9"
 nalgebra = "0.22.0"
-shipyard = "0.4.1"
+shipyard = { version = "0.4.1", features = ["non_send", "non_sync"] }
 libz-sys = { version = "1.1.2", features = ["static"] }

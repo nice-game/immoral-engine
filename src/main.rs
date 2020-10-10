@@ -18,11 +18,8 @@ use glutin::{
 	event::{DeviceEvent, Event, WindowEvent},
 	event_loop::{ControlFlow, EventLoop},
 };
-use shipyard::{system, EntitiesViewMut, UniqueViewMut, ViewMut, World};
-use std::{
-	sync::atomic::Ordering,
-	time::{Duration, Instant},
-};
+use shipyard::{system, EntitiesViewMut, NonSendSync, UniqueView, UniqueViewMut, ViewMut, World};
+use std::time::{Duration, Instant};
 
 fn main() {
 	let event_loop = EventLoop::new();
@@ -30,14 +27,19 @@ fn main() {
 	let allocs = RenderAllocs::new(&ctx);
 
 	let world = World::new();
-	world.add_unique(ctx.clone());
-	world.add_unique(RenderState::new(&allocs));
+	world.add_unique(Application::default());
 	world.add_unique(PlayerController::new());
-	world.run(|mut entities: EntitiesViewMut, mut models: ViewMut<Model>| {
-		entities.add_entity(&mut models, Model::from_file(&allocs, "assets/baldman.dae"));
+	world.add_unique_non_send_sync(RenderState::new(&allocs));
+	world.run(|mut entities: EntitiesViewMut, mut models: NonSendSync<ViewMut<Model>>| {
+		entities.add_entity(&mut *models, Model::from_file(&allocs, "assets/baldman.dae"));
 	});
 
-	world.add_workload("").with_system(system!(update_gui)).with_system(system!(update_player)).build();
+	world
+		.add_workload("")
+		.with_system(system!(update_gui))
+		.with_system(system!(update_player))
+		.with_system(system!(render))
+		.build();
 
 	let mut last_instant = Instant::now();
 
@@ -58,28 +60,38 @@ fn main() {
 			},
 			Event::DeviceEvent { event, .. } => world.run(|events| push_device_event(event, events)),
 			Event::MainEventsCleared => {
-				ctx.default_framebuffer().clear_color(0.1, 0.1, 0.1, 1.0);
-
 				world.run(|mut delta: UniqueViewMut<Duration>| {
 					let now = Instant::now();
 					*delta = now - last_instant;
 					last_instant = now;
 				});
 				world.run_default();
-				if ctx.quit.load(Ordering::Relaxed) {
-					*control = ControlFlow::Exit;
-					return;
-				}
-				world.run(render);
+				world.run(|app: UniqueView<Application>| {
+					if app.quit {
+						*control = ControlFlow::Exit;
+						return;
+					}
+				});
 
 				ctx.flush();
 				ctx.window().swap_buffers().unwrap();
+				ctx.default_framebuffer().clear_color(0.1, 0.1, 0.1, 1.0);
 
 				world.run(clear_events);
 			},
 			_ => (),
 		};
 	});
+}
+
+#[derive(Default)]
+pub struct Application {
+	pub quit: bool,
+}
+impl Application {
+	pub fn quit(&mut self) {
+		self.quit = true;
+	}
 }
 
 fn clear_events(

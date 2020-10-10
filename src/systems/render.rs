@@ -10,7 +10,7 @@ use crate::{
 	RenderAllocs,
 };
 use gl::{types::GLuint, Gl};
-use shipyard::{IntoIter, UniqueView, UniqueViewMut, View};
+use shipyard::{IntoIter, NonSendSync, UniqueView, UniqueViewMut, View};
 use std::{ffi::CString, iter::repeat, mem::size_of, ptr, sync::Arc};
 
 #[derive(Clone, Copy, Default)]
@@ -142,7 +142,11 @@ impl RenderState {
 	}
 }
 
-pub fn render(mut state: UniqueViewMut<RenderState>, player: UniqueView<PlayerController>, models: View<Model>) {
+pub fn render(
+	mut state: NonSendSync<UniqueViewMut<RenderState>>,
+	player: UniqueView<PlayerController>,
+	models: NonSendSync<View<Model>>,
+) {
 	state.cambuf.copy(&player.cam.uniform);
 
 	unsafe {

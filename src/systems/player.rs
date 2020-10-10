@@ -1,18 +1,13 @@
-use crate::{glrs::ctx::Ctx, PlayerController};
+use crate::PlayerController;
 use glutin::event::{DeviceEvent, ElementState, VirtualKeyCode};
 use shipyard::{UniqueView, UniqueViewMut};
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 
 pub fn update_player(
-	_ctx: UniqueView<Arc<Ctx>>,
 	events: UniqueView<Vec<DeviceEvent>>,
 	delta: UniqueView<Duration>,
 	mut player: UniqueViewMut<PlayerController>,
 ) {
-	// if !ctx.grab.load(Ordering::Relaxed) {
-	// 	return;
-	// }
-
 	let PlayerController { movement, cam, .. } = &mut *player;
 
 	for event in &*events {
