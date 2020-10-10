@@ -653,6 +653,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "glrs"
+version = "0.1.0"
+dependencies = [
+ "gl",
+ "glutin 0.24.1",
+]
+
+[[package]]
 name = "glutin"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -797,6 +805,7 @@ dependencies = [
  "assimp",
  "assimp-sys",
  "gl",
+ "glrs",
  "glutin 0.24.1",
  "image",
  "libz-sys",

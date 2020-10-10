@@ -1,11 +1,9 @@
-use crate::{
-	components::model::Instance,
-	glrs::{
-		ctx::Ctx,
-		texture::{Filter, Texture, Texture3D},
-	},
-	systems::render::{Buffer, Vertex},
-	Allocator,
+use crate::{components::model::Instance, systems::render::Vertex};
+use glrs::{
+	alloc::Allocator,
+	buffer::Buffer,
+	texture::{Filter, Texture, Texture3D},
+	Ctx,
 };
 use std::{rc::Rc, sync::atomic::AtomicI32};
 

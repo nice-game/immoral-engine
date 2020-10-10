@@ -1,4 +1,4 @@
-use crate::glrs::alloc::{Allocation, Allocator};
+use crate::alloc::{Allocation, Allocator};
 use std::{
 	marker::PhantomData,
 	mem::size_of,

@@ -1,7 +1,8 @@
-use crate::{glrs::buffer::Buffer, systems::render::allocs::RenderAllocs};
+use crate::systems::render::allocs::RenderAllocs;
 use assimp::{Importer, Mesh as AssimpMesh, Scene, Vector3D};
 use assimp_sys::{aiGetMaterialTexture, AiString, AiTextureType};
 use gl::types::GLint;
+use glrs::buffer::Buffer;
 use nalgebra::{UnitQuaternion, Vector3, Vector4};
 use std::{iter::repeat, mem::size_of, path::Path, ptr, rc::Rc, slice, str, sync::atomic::Ordering};
 

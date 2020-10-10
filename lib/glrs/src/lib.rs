@@ -1,4 +1,9 @@
-use crate::glrs::framebuffer::DefaultFramebuffer;
+pub mod alloc;
+pub mod buffer;
+pub mod framebuffer;
+pub mod texture;
+
+use crate::framebuffer::DefaultFramebuffer;
 use gl::Gl;
 use glutin::{
 	event_loop::EventLoop,

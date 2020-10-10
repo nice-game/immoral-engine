@@ -5,11 +5,11 @@ use crate::{
 		model::{Instance, Model, Vertex},
 		player_controller::PlayerController,
 	},
-	glrs::{buffer::Buffer, texture::Texture},
 	types::camera::CameraUniform,
 	RenderAllocs,
 };
 use gl::{types::GLuint, Gl};
+use glrs::{buffer::Buffer, texture::Texture};
 use shipyard::{IntoIter, NonSendSync, UniqueView, UniqueViewMut, View, World};
 use std::{ffi::CString, iter::repeat, mem::size_of, ptr, rc::Rc};
 

@@ -1,4 +1,4 @@
-use crate::{glrs::buffer::Buffer, Ctx};
+use crate::{buffer::Buffer, Ctx};
 use gl::types::{GLenum, GLint, GLsizei, GLuint};
 use std::rc::Rc;
 

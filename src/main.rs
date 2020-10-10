@@ -1,19 +1,18 @@
 extern crate libz_sys;
 
 mod components;
-mod glrs;
 mod systems;
 mod types;
 
 use crate::{
 	components::{model::Model, player_controller::PlayerController},
-	glrs::{alloc::Allocator, ctx::Ctx, framebuffer::Framebuffer},
 	systems::{
 		gui::update_gui,
 		player::update_player,
 		render::{allocs::RenderAllocs, render, render_init},
 	},
 };
+use glrs::{framebuffer::Framebuffer, Ctx};
 use glutin::{
 	event::{DeviceEvent, Event, WindowEvent},
 	event_loop::{ControlFlow, EventLoop},

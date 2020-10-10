@@ -1,0 +1,9 @@
+[package]
+name = "glrs"
+version = "0.1.0"
+authors = ["Icy Defiance <icydefiance@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+gl = { path = "../gl" }
+glutin = "0.24.1"
