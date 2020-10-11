@@ -112,37 +112,34 @@ impl RenderState {
 				gl.VertexArrayAttribFormat(vao[i], 0, 1, gl::FLOAT, gl::FALSE, 0);
 				gl.VertexArrayAttribBinding(vao[i], 0, 0);
 				gl.VertexArrayBindingDivisor(vao[i], 0, 1);
-				gl.VertexArrayVertexBuffer(vao[i], 0, allocs.instance_alloc.id, 0, size_of::<Instance>() as _);
 
 				// positions
 				gl.EnableVertexArrayAttrib(vao[i], 1);
 				gl.VertexArrayAttribFormat(vao[i], 1, vsize[i], gl::FLOAT, gl::FALSE, 0);
 				gl.VertexArrayAttribBinding(vao[i], 1, 1);
-				gl.VertexArrayVertexBuffer(vao[i], 1, allocs.vert_alloc.id, 0, size_of::<Vertex>() as _);
 				if i >= 1 {
 					// tangent frames
 					gl.EnableVertexArrayAttrib(vao[i], 2);
 					gl.VertexArrayAttribFormat(vao[i], 2, 4, gl::FLOAT, gl::FALSE, 12);
 					gl.VertexArrayAttribBinding(vao[i], 2, 1);
-					gl.VertexArrayVertexBuffer(vao[i], 2, allocs.vert_alloc.id, 0, size_of::<Vertex>() as _);
 					// texcoords
 					gl.EnableVertexArrayAttrib(vao[i], 3);
 					gl.VertexArrayAttribFormat(vao[i], 3, 4, gl::FLOAT, gl::FALSE, 28);
 					gl.VertexArrayAttribBinding(vao[i], 3, 1);
-					gl.VertexArrayVertexBuffer(vao[i], 3, allocs.vert_alloc.id, 0, size_of::<Vertex>() as _);
 				}
 				if i >= 2 {
 					// bone ids
 					gl.EnableVertexArrayAttrib(vao[i], 4);
 					gl.VertexArrayAttribFormat(vao[i], 4, 4, gl::UNSIGNED_BYTE, gl::FALSE, 44);
 					gl.VertexArrayAttribBinding(vao[i], 4, 1);
-					gl.VertexArrayVertexBuffer(vao[i], 4, allocs.vert_alloc.id, 0, size_of::<Vertex>() as _);
 					// bone weights
 					gl.EnableVertexArrayAttrib(vao[i], 5);
 					gl.VertexArrayAttribFormat(vao[i], 5, 4, gl::UNSIGNED_BYTE, gl::TRUE, 48);
 					gl.VertexArrayAttribBinding(vao[i], 5, 1);
-					gl.VertexArrayVertexBuffer(vao[i], 5, allocs.vert_alloc.id, 0, size_of::<Vertex>() as _);
 				}
+
+				gl.VertexArrayVertexBuffer(vao[i], 0, allocs.instance_alloc.id, 0, size_of::<Instance>() as _);
+				gl.VertexArrayVertexBuffer(vao[i], 1, allocs.vert_alloc.id, 0, size_of::<Vertex>() as _);
 			}
 
 			let src = CString::new(include_str!("../shaders/shader.vert")).unwrap();
