@@ -9,7 +9,7 @@ use crate::{
 	RenderAllocs,
 };
 use gl::{types::GLuint, Gl};
-use glrs::{buffer::Buffer, texture::Texture};
+use glrs::{buffer::Buffer, texture::Texture, vertex::VertexArray};
 use shipyard::{IntoIter, NonSendSync, UniqueView, UniqueViewMut, View, World};
 use std::{ffi::CString, iter::repeat, mem::size_of, ptr, rc::Rc};
 
@@ -98,6 +98,10 @@ impl RenderState {
 	fn new(allocs: &Rc<RenderAllocs>) -> Self {
 		let ctx = allocs.ctx();
 		let gl = &ctx.gl;
+
+		let mut vao = VertexArray::new(ctx);
+		vao.enable_vertices::<Instance>(1);
+		vao.enable_vertices::<Vertex>(0);
 
 		let mut vao = [0, 0, 0];
 		let vsize = [2, 3, 3];

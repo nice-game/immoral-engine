@@ -2,7 +2,7 @@ use crate::systems::render::allocs::RenderAllocs;
 use assimp::{Importer, Mesh as AssimpMesh, Scene, Vector3D};
 use assimp_sys::{aiGetMaterialTexture, AiString, AiTextureType};
 use gl::types::GLint;
-use glrs::buffer::Buffer;
+use glrs::{buffer::Buffer, implement_vertex};
 use nalgebra::{UnitQuaternion, Vector3, Vector4};
 use std::{iter::repeat, mem::size_of, path::Path, ptr, rc::Rc, slice, str, sync::atomic::Ordering};
 
@@ -114,6 +114,7 @@ pub struct Instance {
 	/// -1 if no texture
 	tex: f32,
 }
+implement_vertex!(Instance, tex);
 
 #[allow(unused)]
 #[derive(Clone, Copy)]
@@ -123,6 +124,7 @@ pub struct Vertex {
 	rot: UnitQuaternion<f32>,
 	uvw: Vector4<f32>,
 }
+implement_vertex!(Vertex, pos, rot, uvw);
 
 #[allow(unused)]
 #[derive(Clone, Copy)]
@@ -134,3 +136,4 @@ pub struct VertexRigged {
 	bone_id: Vector4<u8>,
 	bone_wt: Vector4<u8>,
 }
+implement_vertex!(VertexRigged, pos, rot, uvw, bone_id, bone_wt);

@@ -2,6 +2,10 @@ pub mod alloc;
 pub mod buffer;
 pub mod framebuffer;
 pub mod texture;
+pub mod vertex;
+
+pub use gl;
+pub use memoffset;
 
 use crate::framebuffer::DefaultFramebuffer;
 use gl::Gl;

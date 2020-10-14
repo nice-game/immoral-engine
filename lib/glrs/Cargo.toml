@@ -7,3 +7,7 @@ edition = "2018"
 [dependencies]
 gl = { path = "../gl" }
 glutin = "0.24.1"
+memoffset = "0.5.6"
+nalgebra = "0.22.0"
+# simba must stay in sync with nalgebra's dependency
+simba = { version = "0.2", default-features = false }
