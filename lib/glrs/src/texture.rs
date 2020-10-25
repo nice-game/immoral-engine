@@ -1,4 +1,4 @@
-use crate::{buffer::Buffer, Ctx};
+use crate::{buffer::BufferSlice, Ctx};
 use gl::types::{GLenum, GLint, GLsizei, GLuint};
 use std::rc::Rc;
 
@@ -24,11 +24,10 @@ impl Texture3D {
 		Texture3D { ctx: ctx.clone(), handle }
 	}
 
-	// TODO: change subimage_* to specialized functions once specialization is stable
-	pub fn subimage_u8(&self, offset: [i32; 3], area: [i32; 3], format: GLenum, buffer: &Buffer<[u8]>) {
-		println!("{:?}", area);
-		assert_eq!(buffer.len() as i32, area[0] * area[1] * area[2] * format_len(format));
-		unsafe { self.subimage(offset, area, format, gl::UNSIGNED_BYTE, buffer.mem.alloc.id, buffer.offset()) };
+	// TODO: change subimage_* to specialized functions once generic specialization is stable
+	pub fn subimage_u8(&self, offset: [i32; 3], area: [i32; 3], format: GLenum, data: &dyn BufferSlice<u8>) {
+		assert_eq!(data.len() as i32, area[0] * area[1] * area[2] * format_len(format));
+		unsafe { self.subimage(offset, area, format, gl::UNSIGNED_BYTE, data.handle(), data.offset()) };
 	}
 
 	unsafe fn subimage(

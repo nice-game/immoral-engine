@@ -1,10 +1,14 @@
 use crate::systems::render::allocs::RenderAllocs;
 use assimp::{Importer, Mesh as AssimpMesh, Scene, Vector3D};
 use assimp_sys::{aiGetMaterialTexture, AiString, AiTextureType};
-use gl::types::GLint;
-use glrs::{buffer::Buffer, implement_vertex};
+use glrs::{
+	alloc::Allocation,
+	buffer::Buffer,
+	gl::{self},
+	implement_vertex,
+};
 use nalgebra::{UnitQuaternion, Vector3, Vector4};
-use std::{iter::repeat, mem::size_of, path::Path, ptr, rc::Rc, slice, str, sync::atomic::Ordering};
+use std::{iter::repeat, path::Path, ptr, rc::Rc, slice, str, sync::atomic::Ordering};
 
 pub struct Model {
 	pub meshes: Vec<Mesh>,
@@ -47,7 +51,7 @@ fn get_textures(file: &Path, scene: &Scene, alloc: &RenderAllocs) -> Vec<f32> {
 				let path = file.join(path);
 				let img = image::open(path).unwrap().to_rgba();
 				let (w, h) = img.dimensions();
-				let buf = alloc.alloc_other_slice(&img.into_raw());
+				let buf = Buffer::from_slice(alloc.ctx(), &img.into_raw());
 				let idx = alloc.tex_free.fetch_add(1, Ordering::Relaxed);
 				alloc.tex.subimage_u8([0, 0, idx], [w as _, h as _, 1], gl::RGBA, &buf);
 				idx as f32
@@ -59,9 +63,9 @@ fn get_textures(file: &Path, scene: &Scene, alloc: &RenderAllocs) -> Vec<f32> {
 }
 
 pub struct Mesh {
-	pub buf: Buffer<[Vertex]>,
-	indices: Buffer<[u16]>,
-	pub instance: Buffer<Instance>,
+	pub buf: Allocation<Vertex>,
+	indices: Allocation<u16>,
+	pub instance: Allocation<Instance>,
 }
 impl Mesh {
 	fn from_assimp(alloc: &Rc<RenderAllocs>, mesh: &AssimpMesh, texidxs: &[f32]) -> Self {
@@ -98,17 +102,13 @@ impl Mesh {
 		Self { buf, indices, instance }
 	}
 
-	pub fn index_offset(&self) -> GLint {
-		(self.indices.mem.offset / size_of::<u16>()) as _
-	}
-
-	pub fn index_count(&self) -> usize {
-		self.indices.len()
+	pub fn indices(&self) -> &Allocation<u16> {
+		&self.indices
 	}
 }
 
 #[allow(unused)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 #[repr(C)]
 pub struct Instance {
 	/// -1 if no texture
@@ -117,7 +117,7 @@ pub struct Instance {
 implement_vertex!(Instance, tex);
 
 #[allow(unused)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 #[repr(C)]
 pub struct Vertex {
 	pos: Vector3<f32>,
@@ -127,7 +127,7 @@ pub struct Vertex {
 implement_vertex!(Vertex, pos, rot, uvw);
 
 #[allow(unused)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 #[repr(C)]
 pub struct VertexRigged {
 	pos: Vector3<f32>,

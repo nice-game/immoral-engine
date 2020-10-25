@@ -19,6 +19,7 @@ use std::rc::Rc;
 pub struct Ctx {
 	window: ContextWrapper<PossiblyCurrent, Window>,
 	pub gl: Gl,
+	uniform_align: i32,
 }
 impl Ctx {
 	pub fn new(event_loop: &EventLoop<()>) -> Rc<Self> {
@@ -30,7 +31,10 @@ impl Ctx {
 		let gl = Gl::load_with(|ptr| window.get_proc_address(ptr) as *const _);
 		assert_eq!(unsafe { gl.GetError() }, 0);
 
-		Rc::new(Self { window, gl })
+		let mut uniform_align = 0;
+		unsafe { gl.GetIntegerv(gl::UNIFORM_BUFFER_OFFSET_ALIGNMENT, &mut uniform_align) };
+
+		Rc::new(Self { window, gl, uniform_align })
 	}
 
 	pub fn default_framebuffer(self: &Rc<Self>) -> DefaultFramebuffer {
