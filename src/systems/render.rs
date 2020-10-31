@@ -9,7 +9,7 @@ use crate::{
 	RenderAllocs,
 };
 use glrs::{
-	buffer::{Buffer, BufferSlice},
+	buffer::{Buffer, BufferSlice, DynamicBuffer},
 	gl::{self, types::GLuint, Gl},
 	texture::Texture,
 	vertex::VertexArray,
@@ -26,7 +26,7 @@ pub fn render(
 	player: UniqueView<PlayerController>,
 	models: NonSendSync<View<Model>>,
 ) {
-	state.cambuf.map_mut(|x| *x = player.cam.uniform);
+	state.cambuf.write(&player.cam.uniform);
 
 	unsafe {
 		let gl = &state.allocs.ctx().gl;
@@ -91,7 +91,7 @@ pub struct RenderState {
 	allocs: Rc<RenderAllocs>,
 	vao: [GLuint; 3],
 	shader: GLuint,
-	cambuf: Rc<Buffer<CameraUniform>>,
+	cambuf: Rc<DynamicBuffer<CameraUniform>>,
 	/* cmd_a: Buffer<[RenderSysDrawCommand]>,
 	 * cmd_b: Buffer<[RenderSysDrawCommand]>,
 	 * cmd_a_length: usize,

@@ -3,7 +3,7 @@ use assimp::{Importer, Mesh as AssimpMesh, Scene, Vector3D};
 use assimp_sys::{aiGetMaterialTexture, AiString, AiTextureType};
 use glrs::{
 	alloc::Allocation,
-	buffer::Buffer,
+	buffer::ImmutableBuffer,
 	gl::{self},
 	implement_vertex,
 };
@@ -51,7 +51,7 @@ fn get_textures(file: &Path, scene: &Scene, alloc: &RenderAllocs) -> Vec<f32> {
 				let path = file.join(path);
 				let img = image::open(path).unwrap().to_rgba();
 				let (w, h) = img.dimensions();
-				let buf = Buffer::from_slice(alloc.ctx(), &img.into_raw());
+				let buf = ImmutableBuffer::from_slice(alloc.ctx(), &img.into_raw());
 				let idx = alloc.tex_free.fetch_add(1, Ordering::Relaxed);
 				alloc.tex.subimage_u8([0, 0, idx], [w as _, h as _, 1], gl::RGBA, &buf);
 				idx as f32

@@ -1,3 +1,6 @@
+#![allow(incomplete_features)]
+#![feature(const_generics)]
+
 pub mod alloc;
 pub mod buffer;
 pub mod framebuffer;

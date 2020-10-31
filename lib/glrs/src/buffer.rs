@@ -1,73 +1,89 @@
 use crate::Ctx;
 use gl::{
-	types::{GLsizeiptr, GLuint},
+	types::{GLbitfield, GLsizeiptr, GLuint},
 	Gl,
 };
-use std::{marker::PhantomData, mem::size_of, ptr, rc::Rc, slice};
+use std::{ffi::c_void, marker::PhantomData, mem::size_of, ptr, rc::Rc};
 
-pub struct Buffer<T: ?Sized> {
+pub type DynamicBuffer<T> = Buffer<T, true>;
+pub type ImmutableBuffer<T> = Buffer<T, false>;
+
+pub struct Buffer<T: ?Sized, const Dynamic: bool> {
 	ctx: Rc<Ctx>,
 	handle: GLuint,
 	len: usize,
 	phantom: PhantomData<T>,
 }
-impl<T> Buffer<T> {
-	pub fn map_mut(&self, cb: impl FnOnce(&mut T)) {
-		let gl = &self.ctx.gl;
-		let refr = unsafe {
-			let ptr = gl.MapNamedBuffer(self.handle, gl::WRITE_ONLY);
-			&mut *(ptr as *mut _)
-		};
-		cb(refr);
-		unsafe { gl.UnmapNamedBuffer(self.handle) };
-	}
-}
-impl<T: Copy + 'static> Buffer<T> {
-	// TODO: add uninitialized() constructor
+impl<T: Copy + 'static, const Dynamic: bool> Buffer<T, Dynamic> {
+	// pub fn map_mut(&self, cb: impl FnOnce(&mut T)) {
+	// 	let gl = &self.ctx.gl;
+	// 	let refr = unsafe {
+	// 		let ptr = gl.MapNamedBuffer(self.handle, gl::WRITE_ONLY);
+	// 		&mut *(ptr as *mut _)
+	// 	};
+	// 	cb(refr);
+	// 	unsafe { gl.UnmapNamedBuffer(self.handle) };
+	// }
 
-	pub fn from_val(ctx: &Rc<Ctx>, val: &T) -> Rc<Buffer<T>> {
+	pub unsafe fn uninitialized(ctx: &Rc<Ctx>) -> Rc<Self> {
 		let gl = &ctx.gl;
-		let size = size_of::<T>() as _;
-		let handle;
-		unsafe {
-			handle = create_buffer_with_storage(gl, size);
-			map_buf_as(gl, handle, |x| *x = val);
-		}
+		let flags = storage_flags(Dynamic);
+		let handle = create_buffer_with_storage(gl, size_of::<T>() as _, ptr::null(), flags);
+		Rc::new(Self { ctx: ctx.clone(), handle, len: 1, phantom: PhantomData })
+	}
+
+	pub fn from_val(ctx: &Rc<Ctx>, val: &T) -> Rc<Self> {
+		let gl = &ctx.gl;
+		let flags = storage_flags(Dynamic);
+		let handle = unsafe { create_buffer_with_storage(gl, size_of::<T>() as _, val as *const _ as _, flags) };
 		Rc::new(Self { ctx: ctx.clone(), handle, len: 1, phantom: PhantomData })
 	}
 }
-impl<T> Buffer<[T]> {
-	pub unsafe fn uninitialized_slice(ctx: &Rc<Ctx>, len: usize) -> Rc<Buffer<[T]>> {
+impl<T: Copy + 'static> Buffer<T, true> {
+	pub fn write(&self, val: &T) {
+		unsafe { self.ctx.gl.NamedBufferSubData(self.handle, 0, size_of::<T>() as _, val as *const _ as _) };
+	}
+}
+impl<T: Copy + 'static, const Dynamic: bool> Buffer<[T], Dynamic> {
+	pub unsafe fn uninitialized_slice(ctx: &Rc<Ctx>, len: usize) -> Rc<Self> {
 		let gl = &ctx.gl;
-		let handle = create_buffer_with_storage(gl, (len * size_of::<T>()) as _);
+		let flags = storage_flags(Dynamic);
+		let handle = create_buffer_with_storage(gl, (len * size_of::<T>()) as _, ptr::null(), flags);
 		Rc::new(Self { ctx: ctx.clone(), handle, len, phantom: PhantomData })
 	}
 
-	pub fn map_range_mut(&self, offset: usize, len: usize, cb: impl FnOnce(&mut [T])) {
-		let gl = &self.ctx.gl;
-		let offset = (offset * size_of::<T>()) as _;
-		let size = (len * size_of::<T>()) as _;
-		let refr = unsafe {
-			let ptr = gl.MapNamedBufferRange(self.handle, offset, size, gl::MAP_WRITE_BIT);
-			slice::from_raw_parts_mut(ptr as *mut T, len)
-		};
-		cb(refr);
-		unsafe { gl.UnmapNamedBuffer(self.handle) };
+	// pub fn map_range_mut(&self, offset: usize, len: usize, cb: impl FnOnce(&mut [T])) {
+	// 	let gl = &self.ctx.gl;
+	// 	let offset = (offset * size_of::<T>()) as _;
+	// 	let size = (len * size_of::<T>()) as _;
+	// 	let refr = unsafe {
+	// 		let ptr = gl.MapNamedBufferRange(self.handle, offset, size, gl::MAP_WRITE_BIT);
+	// 		slice::from_raw_parts_mut(ptr as *mut T, len)
+	// 	};
+	// 	cb(refr);
+	// 	unsafe { gl.UnmapNamedBuffer(self.handle) };
+	// }
+
+	pub fn from_slice(ctx: &Rc<Ctx>, val: &[T]) -> Rc<Self> {
+		let gl = &ctx.gl;
+		let len = val.len();
+		let flags = storage_flags(Dynamic);
+		let handle = unsafe { create_buffer_with_storage(gl, (len * size_of::<T>()) as _, val.as_ptr() as _, flags) };
+		Rc::new(Self { ctx: ctx.clone(), handle, len, phantom: PhantomData })
 	}
-}
-impl<T: Copy + 'static> Buffer<[T]> {
-	pub fn from_slice(ctx: &Rc<Ctx>, val: &[T]) -> Rc<Buffer<[T]>> {
-		let ret = unsafe { Self::uninitialized_slice(ctx, val.len()) };
-		ret.map_range_mut(0, val.len(), |x| x.copy_from_slice(val));
-		ret
-	}
-}
-impl<T: Copy + 'static> Buffer<[T]> {
+
 	pub fn len(&self) -> usize {
 		self.len
 	}
 }
-impl<T: ?Sized> Buffer<T> {
+impl<T: Copy + 'static> Buffer<[T], true> {
+	pub fn write_range(&self, offset: usize, val: &[T]) {
+		let offset = offset * size_of::<T>();
+		let size = val.len() * size_of::<T>();
+		unsafe { self.ctx.gl.NamedBufferSubData(self.handle, offset as _, size as _, val.as_ptr() as _) };
+	}
+}
+impl<T: ?Sized, const Dynamic: bool> Buffer<T, Dynamic> {
 	pub fn ctx(&self) -> &Rc<Ctx> {
 		&self.ctx
 	}
@@ -76,12 +92,12 @@ impl<T: ?Sized> Buffer<T> {
 		self.handle
 	}
 }
-impl<T: ?Sized> Drop for Buffer<T> {
+impl<T: ?Sized, const Dynamic: bool> Drop for Buffer<T, Dynamic> {
 	fn drop(&mut self) {
 		unsafe { self.ctx.gl.DeleteBuffers(1, &self.handle) };
 	}
 }
-impl<T> BufferSlice<T> for Rc<Buffer<[T]>> {
+impl<T, const Dynamic: bool> BufferSlice<T> for Rc<Buffer<[T], Dynamic>> {
 	fn handle(&self) -> GLuint {
 		self.handle
 	}
@@ -101,15 +117,17 @@ pub trait BufferSlice<T> {
 	fn len(&self) -> usize;
 }
 
-unsafe fn create_buffer_with_storage(gl: &Gl, size: GLsizeiptr) -> GLuint {
+unsafe fn create_buffer_with_storage(gl: &Gl, size: GLsizeiptr, data: *const c_void, flags: GLbitfield) -> GLuint {
 	let mut handle = 0;
 	gl.CreateBuffers(1, &mut handle);
-	gl.NamedBufferStorage(handle, size, ptr::null(), gl::MAP_WRITE_BIT);
+	gl.NamedBufferStorage(handle, size, data, flags);
 	handle
 }
-unsafe fn map_buf_as<T>(gl: &Gl, handle: GLuint, cb: impl FnOnce(&mut T)) {
-	let ptr = gl.MapNamedBufferRange(handle, 0, size_of::<T>() as _, gl::MAP_WRITE_BIT);
-	let refr = &mut *(ptr as *mut T);
-	cb(refr);
-	gl.UnmapNamedBuffer(handle);
+
+const fn storage_flags(dynamic: bool) -> GLbitfield {
+	let mut ret = 0;
+	if dynamic {
+		ret |= gl::DYNAMIC_STORAGE_BIT;
+	}
+	ret
 }

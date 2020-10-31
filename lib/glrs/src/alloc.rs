@@ -1,22 +1,22 @@
 use crate::{
-	buffer::{Buffer, BufferSlice},
+	buffer::{BufferSlice, DynamicBuffer},
 	Ctx,
 };
 use gl::types::GLuint;
 use std::{cell::Cell, marker::PhantomData, mem::size_of, rc::Rc, slice};
 
 pub trait AllocatorAbstract {
-	fn buffer(&self) -> &Buffer<[u8]>;
+	fn buffer(&self) -> &DynamicBuffer<[u8]>;
 }
 
 pub struct Allocator<T, S = PackedStrategy> {
-	pub buffer: Rc<Buffer<[u8]>>,
+	pub buffer: Rc<DynamicBuffer<[u8]>>,
 	free: Cell<usize>,
 	strategy: PhantomData<(T, S)>,
 }
 impl<T: 'static, S: AllocatorStrategy> Allocator<T, S> {
 	pub fn new(ctx: &Rc<Ctx>, size: usize) -> Rc<Self> {
-		let buffer = unsafe { Buffer::uninitialized_slice(ctx, size) };
+		let buffer = unsafe { DynamicBuffer::uninitialized_slice(ctx, size) };
 		Rc::new(Self { buffer, free: Cell::new(0), strategy: PhantomData })
 	}
 
@@ -25,7 +25,7 @@ impl<T: 'static, S: AllocatorStrategy> Allocator<T, S> {
 		let len = val.len();
 		let size = len * size_of::<T>();
 		self.free.set(offset + self.align(size));
-		self.buffer.map_range_mut(offset, size, |x| x.copy_from_slice(unsafe { slice_as_bytes(val) }));
+		self.buffer.write_range(offset, unsafe { slice_as_bytes(val) });
 		Allocation { alloc: self.clone(), offset, len, phantom: PhantomData }
 	}
 
@@ -43,7 +43,7 @@ impl<T: 'static, S: AllocatorStrategy> Allocator<T, S> {
 	}
 }
 impl<T, S> AllocatorAbstract for Allocator<T, S> {
-	fn buffer(&self) -> &Buffer<[u8]> {
+	fn buffer(&self) -> &DynamicBuffer<[u8]> {
 		&self.buffer
 	}
 }
