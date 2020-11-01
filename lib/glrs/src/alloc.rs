@@ -6,7 +6,7 @@ use gl::types::GLuint;
 use std::{cell::Cell, marker::PhantomData, mem::size_of, rc::Rc, slice};
 
 pub trait AllocatorAbstract {
-	fn buffer(&self) -> &DynamicBuffer<[u8]>;
+	fn buffer(&self) -> &Rc<DynamicBuffer<[u8]>>;
 }
 
 pub struct Allocator<T, S = PackedStrategy> {
@@ -29,10 +29,6 @@ impl<T: 'static, S: AllocatorStrategy> Allocator<T, S> {
 		Allocation { alloc: self.clone(), offset, len, phantom: PhantomData }
 	}
 
-	pub fn handle(&self) -> GLuint {
-		self.buffer.handle()
-	}
-
 	pub fn ctx(&self) -> &Rc<Ctx> {
 		self.buffer.ctx()
 	}
@@ -43,7 +39,7 @@ impl<T: 'static, S: AllocatorStrategy> Allocator<T, S> {
 	}
 }
 impl<T, S> AllocatorAbstract for Allocator<T, S> {
-	fn buffer(&self) -> &DynamicBuffer<[u8]> {
+	fn buffer(&self) -> &Rc<DynamicBuffer<[u8]>> {
 		&self.buffer
 	}
 }

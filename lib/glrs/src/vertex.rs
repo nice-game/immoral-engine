@@ -1,10 +1,12 @@
-use crate::Ctx;
-use nalgebra::{Quaternion, Unit};
-use simba::simd::SimdValue;
-use std::rc::Rc;
-
+use crate::{
+	alloc::{Allocator, AllocatorAbstract},
+	buffer::DynamicBuffer,
+	Ctx,
+};
 use gl::types::{GLenum, GLint, GLuint};
-use nalgebra::{allocator::Allocator, DefaultAllocator, Dim, DimName, Scalar, VectorN};
+use nalgebra::{allocator::Allocator as NAllocator, DefaultAllocator, Dim, DimName, Quaternion, Scalar, Unit, VectorN};
+use simba::simd::SimdValue;
+use std::{mem::size_of, rc::Rc};
 
 #[macro_export]
 macro_rules! implement_vertex {
@@ -53,7 +55,7 @@ implement_attribute!(u8, 1, gl::UNSIGNED_BYTE);
 implement_attribute!(f32, 1, gl::FLOAT);
 impl<N: Scalar + VertexAttribute, D: Dim + DimName> VertexAttribute for VectorN<N, D>
 where
-	DefaultAllocator: Allocator<N, D>,
+	DefaultAllocator: NAllocator<N, D>,
 {
 	fn size() -> GLint {
 		D::try_to_usize().unwrap() as _
@@ -82,6 +84,7 @@ impl<T: VertexAttribute> VertexAttribute for Unit<T> {
 	}
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct VertexAttributeFormat {
 	pub offset: GLuint,
 	pub size: GLint,
@@ -93,27 +96,50 @@ pub struct VertexArray {
 	handle: GLuint,
 	formats: Vec<Vec<VertexAttributeFormat>>,
 	next_attrib: GLuint,
+	element_buffer: Option<Rc<DynamicBuffer<[u8]>>>,
+	vertex_buffers: Vec<Option<Rc<DynamicBuffer<[u8]>>>>,
 }
 impl VertexArray {
 	pub fn new(ctx: &Rc<Ctx>) -> Self {
 		let mut handle = 0;
 		unsafe { ctx.gl.CreateVertexArrays(1, &mut handle) };
-		Self { ctx: ctx.clone(), handle, formats: vec![], next_attrib: 0 }
+		Self { ctx: ctx.clone(), handle, formats: vec![], next_attrib: 0, element_buffer: None, vertex_buffers: vec![] }
 	}
 
 	pub fn enable_vertices<V: Vertex>(&mut self, divisor: GLuint) {
 		let format = V::format();
+		println!("{:?}", format);
 		let gl = &self.ctx.gl;
 		for &VertexAttributeFormat { offset, size, typ } in &format {
 			unsafe {
 				gl.EnableVertexArrayAttrib(self.handle, self.next_attrib);
 				gl.VertexArrayAttribFormat(self.handle, self.next_attrib, size, typ, gl::FALSE, offset);
 				gl.VertexArrayAttribBinding(self.handle, self.next_attrib, self.formats.len() as _);
-				gl.VertexArrayBindingDivisor(self.handle, self.next_attrib, divisor);
+				gl.VertexArrayBindingDivisor(self.handle, self.formats.len() as _, divisor);
 			}
+			self.next_attrib += 1;
 		}
 		self.formats.push(format);
-		self.next_attrib += 1;
+		self.vertex_buffers.push(None);
+	}
+
+	pub fn element_buffer(&mut self, element_buffer: &Allocator<u16>) {
+		let element_buffer = element_buffer.buffer();
+		unsafe { self.ctx.gl.VertexArrayElementBuffer(self.handle, element_buffer.handle()) };
+		self.element_buffer = Some(element_buffer.clone());
+	}
+
+	pub fn vertex_buffer<V: Vertex>(&mut self, binding: usize, vertex_buffer: &Allocator<V>) {
+		assert_eq!(V::format(), self.formats[binding]);
+
+		let vertex_buffer = vertex_buffer.buffer();
+		let stride = size_of::<V>() as _;
+		unsafe { self.ctx.gl.VertexArrayVertexBuffer(self.handle, binding as _, vertex_buffer.handle(), 0, stride) };
+		self.vertex_buffers[binding] = Some(vertex_buffer.clone());
+	}
+
+	pub fn handle(&self) -> GLuint {
+		self.handle
 	}
 }
 impl Drop for VertexArray {

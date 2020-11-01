@@ -8,13 +8,13 @@ use std::{ffi::c_void, marker::PhantomData, mem::size_of, ptr, rc::Rc};
 pub type DynamicBuffer<T> = Buffer<T, true>;
 pub type ImmutableBuffer<T> = Buffer<T, false>;
 
-pub struct Buffer<T: ?Sized, const Dynamic: bool> {
+pub struct Buffer<T: ?Sized, const DYN: bool> {
 	ctx: Rc<Ctx>,
 	handle: GLuint,
 	len: usize,
 	phantom: PhantomData<T>,
 }
-impl<T: Copy + 'static, const Dynamic: bool> Buffer<T, Dynamic> {
+impl<T: Copy + 'static, const DYN: bool> Buffer<T, DYN> {
 	// pub fn map_mut(&self, cb: impl FnOnce(&mut T)) {
 	// 	let gl = &self.ctx.gl;
 	// 	let refr = unsafe {
@@ -27,14 +27,14 @@ impl<T: Copy + 'static, const Dynamic: bool> Buffer<T, Dynamic> {
 
 	pub unsafe fn uninitialized(ctx: &Rc<Ctx>) -> Rc<Self> {
 		let gl = &ctx.gl;
-		let flags = storage_flags(Dynamic);
+		let flags = storage_flags(DYN);
 		let handle = create_buffer_with_storage(gl, size_of::<T>() as _, ptr::null(), flags);
 		Rc::new(Self { ctx: ctx.clone(), handle, len: 1, phantom: PhantomData })
 	}
 
 	pub fn from_val(ctx: &Rc<Ctx>, val: &T) -> Rc<Self> {
 		let gl = &ctx.gl;
-		let flags = storage_flags(Dynamic);
+		let flags = storage_flags(DYN);
 		let handle = unsafe { create_buffer_with_storage(gl, size_of::<T>() as _, val as *const _ as _, flags) };
 		Rc::new(Self { ctx: ctx.clone(), handle, len: 1, phantom: PhantomData })
 	}
@@ -44,10 +44,10 @@ impl<T: Copy + 'static> Buffer<T, true> {
 		unsafe { self.ctx.gl.NamedBufferSubData(self.handle, 0, size_of::<T>() as _, val as *const _ as _) };
 	}
 }
-impl<T: Copy + 'static, const Dynamic: bool> Buffer<[T], Dynamic> {
+impl<T: Copy + 'static, const DYN: bool> Buffer<[T], DYN> {
 	pub unsafe fn uninitialized_slice(ctx: &Rc<Ctx>, len: usize) -> Rc<Self> {
 		let gl = &ctx.gl;
-		let flags = storage_flags(Dynamic);
+		let flags = storage_flags(DYN);
 		let handle = create_buffer_with_storage(gl, (len * size_of::<T>()) as _, ptr::null(), flags);
 		Rc::new(Self { ctx: ctx.clone(), handle, len, phantom: PhantomData })
 	}
@@ -67,7 +67,7 @@ impl<T: Copy + 'static, const Dynamic: bool> Buffer<[T], Dynamic> {
 	pub fn from_slice(ctx: &Rc<Ctx>, val: &[T]) -> Rc<Self> {
 		let gl = &ctx.gl;
 		let len = val.len();
-		let flags = storage_flags(Dynamic);
+		let flags = storage_flags(DYN);
 		let handle = unsafe { create_buffer_with_storage(gl, (len * size_of::<T>()) as _, val.as_ptr() as _, flags) };
 		Rc::new(Self { ctx: ctx.clone(), handle, len, phantom: PhantomData })
 	}
@@ -83,7 +83,7 @@ impl<T: Copy + 'static> Buffer<[T], true> {
 		unsafe { self.ctx.gl.NamedBufferSubData(self.handle, offset as _, size as _, val.as_ptr() as _) };
 	}
 }
-impl<T: ?Sized, const Dynamic: bool> Buffer<T, Dynamic> {
+impl<T: ?Sized, const DYN: bool> Buffer<T, DYN> {
 	pub fn ctx(&self) -> &Rc<Ctx> {
 		&self.ctx
 	}
@@ -92,12 +92,12 @@ impl<T: ?Sized, const Dynamic: bool> Buffer<T, Dynamic> {
 		self.handle
 	}
 }
-impl<T: ?Sized, const Dynamic: bool> Drop for Buffer<T, Dynamic> {
+impl<T: ?Sized, const DYN: bool> Drop for Buffer<T, DYN> {
 	fn drop(&mut self) {
 		unsafe { self.ctx.gl.DeleteBuffers(1, &self.handle) };
 	}
 }
-impl<T, const Dynamic: bool> BufferSlice<T> for Rc<Buffer<[T], Dynamic>> {
+impl<T, const DYN: bool> BufferSlice<T> for Rc<Buffer<[T], DYN>> {
 	fn handle(&self) -> GLuint {
 		self.handle
 	}

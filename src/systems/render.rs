@@ -62,7 +62,7 @@ pub fn render(
 		// );
 		for model in models.iter() {
 			for mesh in &model.meshes {
-				gl.BindVertexArray(state.vao[1]);
+				gl.BindVertexArray(state.vao.handle());
 				gl.DrawElementsInstancedBaseVertexBaseInstance(
 					gl::TRIANGLES,
 					mesh.indices().len() as _,
@@ -89,7 +89,7 @@ struct RenderSysDrawCommand {
 
 pub struct RenderState {
 	allocs: Rc<RenderAllocs>,
-	vao: [GLuint; 3],
+	vao: VertexArray,
 	shader: GLuint,
 	cambuf: Rc<DynamicBuffer<CameraUniform>>,
 	/* cmd_a: Buffer<[RenderSysDrawCommand]>,
@@ -106,48 +106,11 @@ impl RenderState {
 		let mut vao = VertexArray::new(ctx);
 		vao.enable_vertices::<Instance>(1);
 		vao.enable_vertices::<Vertex>(0);
+		vao.element_buffer(&allocs.idx_alloc);
+		vao.vertex_buffer(0, &allocs.instance_alloc);
+		vao.vertex_buffer(1, &allocs.vert_alloc);
 
-		let mut vao = [0, 0, 0];
-		let vsize = [2, 3, 3];
 		unsafe {
-			gl.CreateVertexArrays(3, vao.as_mut_ptr());
-			for i in 0..3 {
-				// instances
-				gl.EnableVertexArrayAttrib(vao[i], 0);
-				gl.VertexArrayAttribFormat(vao[i], 0, 1, gl::FLOAT, gl::FALSE, 0);
-				gl.VertexArrayAttribBinding(vao[i], 0, 0);
-				gl.VertexArrayBindingDivisor(vao[i], 0, 1);
-
-				// positions
-				gl.EnableVertexArrayAttrib(vao[i], 1);
-				gl.VertexArrayAttribFormat(vao[i], 1, vsize[i], gl::FLOAT, gl::FALSE, 0);
-				gl.VertexArrayAttribBinding(vao[i], 1, 1);
-				if i >= 1 {
-					// tangent frames
-					gl.EnableVertexArrayAttrib(vao[i], 2);
-					gl.VertexArrayAttribFormat(vao[i], 2, 4, gl::FLOAT, gl::FALSE, 12);
-					gl.VertexArrayAttribBinding(vao[i], 2, 1);
-					// texcoords
-					gl.EnableVertexArrayAttrib(vao[i], 3);
-					gl.VertexArrayAttribFormat(vao[i], 3, 4, gl::FLOAT, gl::FALSE, 28);
-					gl.VertexArrayAttribBinding(vao[i], 3, 1);
-				}
-				if i >= 2 {
-					// bone ids
-					gl.EnableVertexArrayAttrib(vao[i], 4);
-					gl.VertexArrayAttribFormat(vao[i], 4, 4, gl::UNSIGNED_BYTE, gl::FALSE, 44);
-					gl.VertexArrayAttribBinding(vao[i], 4, 1);
-					// bone weights
-					gl.EnableVertexArrayAttrib(vao[i], 5);
-					gl.VertexArrayAttribFormat(vao[i], 5, 4, gl::UNSIGNED_BYTE, gl::TRUE, 48);
-					gl.VertexArrayAttribBinding(vao[i], 5, 1);
-				}
-
-				gl.VertexArrayElementBuffer(vao[i], allocs.idx_alloc.handle());
-				gl.VertexArrayVertexBuffer(vao[i], 0, allocs.instance_alloc.handle(), 0, size_of::<Instance>() as _);
-				gl.VertexArrayVertexBuffer(vao[i], 1, allocs.vert_alloc.handle(), 0, size_of::<Vertex>() as _);
-			}
-
 			let src = CString::new(include_str!("../shaders/shader.vert")).unwrap();
 			let vshader = gl.CreateShader(gl::VERTEX_SHADER);
 			gl.ShaderSource(vshader, 1, [src.as_ptr()].as_ptr(), ptr::null());
