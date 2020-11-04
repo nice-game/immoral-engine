@@ -11,6 +11,7 @@ use crate::{
 use glrs::{
 	buffer::{Buffer, BufferSlice, DynamicBuffer},
 	gl::{self, types::GLuint, Gl},
+	shader::Shader,
 	texture::Texture,
 	vertex::VertexArray,
 };
@@ -30,7 +31,7 @@ pub fn render(
 
 	unsafe {
 		let gl = &state.allocs.ctx().gl;
-		gl.UseProgram(state.shader);
+		gl.UseProgram(state.shader.handle());
 
 		// let mut cmd_counter = 0;
 		// let cmd = if !state.cmd_phase { &mut state.cmd_a } else { &mut state.cmd_b };
@@ -90,7 +91,7 @@ struct RenderSysDrawCommand {
 pub struct RenderState {
 	allocs: Rc<RenderAllocs>,
 	vao: VertexArray,
-	shader: GLuint,
+	shader: Shader,
 	cambuf: Rc<DynamicBuffer<CameraUniform>>,
 	/* cmd_a: Buffer<[RenderSysDrawCommand]>,
 	 * cmd_b: Buffer<[RenderSysDrawCommand]>,
@@ -110,29 +111,11 @@ impl RenderState {
 		vao.vertex_buffer(0, &allocs.instance_alloc);
 		vao.vertex_buffer(1, &allocs.vert_alloc);
 
+		let shader =
+			Shader::init(ctx).vertex_file("src/shaders/shader.vert").fragment_file("src/shaders/shader.frag").build();
+
 		unsafe {
-			let src = CString::new(include_str!("../shaders/shader.vert")).unwrap();
-			let vshader = gl.CreateShader(gl::VERTEX_SHADER);
-			gl.ShaderSource(vshader, 1, [src.as_ptr()].as_ptr(), ptr::null());
-			gl.CompileShader(vshader);
-			check_shader(gl, vshader);
-
-			let src = CString::new(include_str!("../shaders/shader.frag")).unwrap();
-			let fshader = gl.CreateShader(gl::FRAGMENT_SHADER);
-			gl.ShaderSource(fshader, 1, [src.as_ptr()].as_ptr(), ptr::null());
-			gl.CompileShader(fshader);
-			check_shader(gl, fshader);
-
-			let shader = gl.CreateProgram();
-			gl.AttachShader(shader, vshader);
-			gl.AttachShader(shader, fshader);
-			gl.LinkProgram(shader);
-			check_program(gl, shader);
-
-			gl.DeleteShader(fshader);
-			gl.DeleteShader(vshader);
-
-			let camidx = gl.GetUniformBlockIndex(shader, "Camera\0".as_ptr() as _);
+			let camidx = gl.GetUniformBlockIndex(shader.handle(), "Camera\0".as_ptr() as _);
 
 			let cambuf = Buffer::from_val(ctx, &CameraUniform::default());
 
@@ -141,10 +124,10 @@ impl RenderState {
 
 			gl.BindBufferRange(gl::UNIFORM_BUFFER, camidx, cambuf.handle(), 0, size_of::<CameraUniform>() as _);
 
-			gl.UseProgram(shader);
+			gl.UseProgram(shader.handle());
 			gl.ActiveTexture(gl::TEXTURE0);
 			gl.BindTexture(gl::TEXTURE_2D_ARRAY, allocs.tex.handle());
-			gl.Uniform1i(gl.GetUniformLocation(shader, "tex\0".as_ptr() as _), 0);
+			gl.Uniform1i(gl.GetUniformLocation(shader.handle(), "tex\0".as_ptr() as _), 0);
 
 			// gl.BindBuffer(gl::DRAW_INDIRECT_BUFFER, allocs.other_alloc.id);
 
@@ -160,29 +143,5 @@ impl RenderState {
 				 * cmd_phase: false, */
 			}
 		}
-	}
-}
-
-unsafe fn check_shader(gl: &Gl, shader: GLuint) {
-	let mut success = -1;
-	gl.GetShaderiv(shader, gl::COMPILE_STATUS, &mut success);
-	if success == 0 {
-		let mut len = 0;
-		gl.GetShaderiv(shader, gl::INFO_LOG_LENGTH, &mut len);
-		let mut info_log: String = repeat('\0').take(len as _).collect();
-		gl.GetShaderInfoLog(shader, 512, ptr::null_mut(), info_log.as_mut_ptr() as _);
-		panic!("{:?}", info_log);
-	}
-}
-
-unsafe fn check_program(gl: &Gl, program: GLuint) {
-	let mut success = -1;
-	gl.GetProgramiv(program, gl::LINK_STATUS, &mut success);
-	if success == 0 {
-		let mut len = 0;
-		gl.GetProgramiv(program, gl::INFO_LOG_LENGTH, &mut len);
-		let mut info_log: String = repeat('\0').take(len as _).collect();
-		gl.GetProgramInfoLog(program, 512, ptr::null_mut(), info_log.as_mut_ptr() as _);
-		panic!("{:?}", info_log);
 	}
 }
