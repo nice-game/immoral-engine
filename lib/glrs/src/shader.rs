@@ -13,11 +13,11 @@ use std::{
 	rc::Rc,
 };
 
-pub struct Shader {
+pub struct ShaderProgram {
 	ctx: Rc<Ctx>,
 	handle: GLuint,
 }
-impl Shader {
+impl ShaderProgram {
 	pub fn init(ctx: &Rc<Ctx>) -> ShaderBuilder {
 		ShaderBuilder::new(ctx)
 	}
@@ -26,6 +26,7 @@ impl Shader {
 		self.handle
 	}
 }
+
 
 pub struct ShaderBuilder {
 	ctx: Rc<Ctx>,
@@ -45,7 +46,7 @@ impl ShaderBuilder {
 		self
 	}
 
-	pub fn build(self) -> Shader {
+	pub fn build(self) -> ShaderProgram {
 		assert_ne!(self.vertex, 0);
 
 		let gl = &self.ctx.gl;
@@ -63,7 +64,7 @@ impl ShaderBuilder {
 			}
 			gl.DeleteShader(self.vertex);
 
-			Shader { ctx: self.ctx, handle }
+			ShaderProgram { ctx: self.ctx, handle }
 		}
 	}
 

@@ -8,8 +8,14 @@ pub mod shader;
 pub mod texture;
 pub mod vertex;
 
+use crate::{
+	buffer::BufferSlice,
+	shader::ShaderProgram,
+	vertex::{Vertex, VertexArray},
+};
 pub use gl;
 pub use memoffset;
+use std::mem::size_of;
 
 use crate::framebuffer::DefaultFramebuffer;
 use gl::Gl;
@@ -45,11 +51,38 @@ impl Ctx {
 		DefaultFramebuffer::new(self)
 	}
 
-	pub fn window(&self) -> &ContextWrapper<PossiblyCurrent, Window> {
-		&self.window
+	pub fn draw_elements_instanced<V: Vertex, I>(
+		&self,
+		indices: &dyn BufferSlice<u16>,
+		vertices: &dyn BufferSlice<V>,
+		instances: &dyn BufferSlice<I>,
+	) {
+		unsafe {
+			self.gl.DrawElementsInstancedBaseVertexBaseInstance(
+				gl::TRIANGLES,
+				indices.len() as _,
+				gl::UNSIGNED_SHORT,
+				indices.offset() as _,
+				1,
+				(vertices.offset() as usize / size_of::<V>()) as _,
+				(instances.offset() as usize / size_of::<I>()) as _,
+			)
+		};
 	}
 
 	pub fn flush(&self) {
 		unsafe { self.gl.Flush() };
+	}
+
+	pub fn use_program(&self, program: &ShaderProgram) {
+		unsafe { self.gl.UseProgram(program.handle()) };
+	}
+
+	pub fn bind_vertex_array(&self, vao: &VertexArray) {
+		unsafe { self.gl.BindVertexArray(vao.handle()) };
+	}
+
+	pub fn window(&self) -> &ContextWrapper<PossiblyCurrent, Window> {
+		&self.window
 	}
 }

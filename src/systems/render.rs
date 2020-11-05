@@ -11,7 +11,7 @@ use crate::{
 use glrs::{
 	buffer::{Buffer, BufferSlice, DynamicBuffer},
 	gl::{self, types::GLuint, Gl},
-	shader::Shader,
+	shader::ShaderProgram,
 	texture::Texture,
 	vertex::VertexArray,
 };
@@ -29,51 +29,41 @@ pub fn render(
 ) {
 	state.cambuf.write(&player.cam.uniform);
 
-	unsafe {
-		let gl = &state.allocs.ctx().gl;
-		gl.UseProgram(state.shader.handle());
-
-		// let mut cmd_counter = 0;
-		// let cmd = if !state.cmd_phase { &mut state.cmd_a } else { &mut state.cmd_b };
-		// for model in models.iter() {
-		// 	for mesh in &model.meshes {
-		// 		cmd[cmd_counter].count = mesh.index_count() as u32;
-		// 		cmd[cmd_counter].instance_count = 1;
-		// 		cmd[cmd_counter].first_index = mesh.index_offset() as u32;
-		// 		cmd[cmd_counter].base_vertex = mesh.buf.offset() as u32;
-		// 		cmd[cmd_counter].base_instance = mesh.instance.offset() as u32;
-		// 		cmd_counter += 1;
-		// 	}
-		// }
-		// if !state.cmd_phase {
-		// 	state.cmd_a_length = cmd_counter;
-		// 	state.cmd_phase = false;
-		// } else {
-		// 	state.cmd_b_length = cmd_counter;
-		// 	state.cmd_phase = true;
-		// }
-		let gl = &state.allocs.ctx().gl;
-		// gl.BindVertexArray(state.vao[1]);
-		// gl.MultiDrawElementsIndirect(
-		// gl::TRIANGLES,
-		// gl::UNSIGNED_SHORT,
-		// if state.cmd_phase {state.cmd_a.offset()} else {state.cmd_b.offset()} as _,
-		// if state.cmd_phase {state.cmd_a_length} else {state.cmd_b_length} as _,
-		// 0,
-		// );
-		for model in models.iter() {
-			for mesh in &model.meshes {
-				gl.BindVertexArray(state.vao.handle());
-				gl.DrawElementsInstancedBaseVertexBaseInstance(
-					gl::TRIANGLES,
-					mesh.indices().len() as _,
-					gl::UNSIGNED_SHORT,
-					mesh.indices().offset() as _,
-					1,
-					(mesh.buf.offset() as usize / size_of::<Vertex>()) as _,
-					(mesh.instance.offset() as usize / size_of::<Instance>()) as _,
-				);
-			}
+	// unsafe {
+	// let mut cmd_counter = 0;
+	// let cmd = if !state.cmd_phase { &mut state.cmd_a } else { &mut state.cmd_b };
+	// for model in models.iter() {
+	// 	for mesh in &model.meshes {
+	// 		cmd[cmd_counter].count = mesh.index_count() as u32;
+	// 		cmd[cmd_counter].instance_count = 1;
+	// 		cmd[cmd_counter].first_index = mesh.index_offset() as u32;
+	// 		cmd[cmd_counter].base_vertex = mesh.buf.offset() as u32;
+	// 		cmd[cmd_counter].base_instance = mesh.instance.offset() as u32;
+	// 		cmd_counter += 1;
+	// 	}
+	// }
+	// if !state.cmd_phase {
+	// 	state.cmd_a_length = cmd_counter;
+	// 	state.cmd_phase = false;
+	// } else {
+	// 	state.cmd_b_length = cmd_counter;
+	// 	state.cmd_phase = true;
+	// }
+	// let gl = &state.allocs.ctx().gl;
+	// gl.BindVertexArray(state.vao[1]);
+	// gl.MultiDrawElementsIndirect(
+	// gl::TRIANGLES,
+	// gl::UNSIGNED_SHORT,
+	// if state.cmd_phase {state.cmd_a.offset()} else {state.cmd_b.offset()} as _,
+	// if state.cmd_phase {state.cmd_a_length} else {state.cmd_b_length} as _,
+	// 0,
+	// );
+	// }
+	state.allocs.ctx().use_program(&state.shader);
+	state.allocs.ctx().bind_vertex_array(&state.vao);
+	for model in models.iter() {
+		for mesh in &model.meshes {
+			state.allocs.ctx().draw_elements_instanced(mesh.indices(), &mesh.buf, &mesh.instance);
 		}
 	}
 }
@@ -91,7 +81,7 @@ struct RenderSysDrawCommand {
 pub struct RenderState {
 	allocs: Rc<RenderAllocs>,
 	vao: VertexArray,
-	shader: Shader,
+	shader: ShaderProgram,
 	cambuf: Rc<DynamicBuffer<CameraUniform>>,
 	/* cmd_a: Buffer<[RenderSysDrawCommand]>,
 	 * cmd_b: Buffer<[RenderSysDrawCommand]>,
@@ -111,8 +101,10 @@ impl RenderState {
 		vao.vertex_buffer(0, &allocs.instance_alloc);
 		vao.vertex_buffer(1, &allocs.vert_alloc);
 
-		let shader =
-			Shader::init(ctx).vertex_file("src/shaders/shader.vert").fragment_file("src/shaders/shader.frag").build();
+		let shader = ShaderProgram::init(ctx)
+			.vertex_file("src/shaders/shader.vert")
+			.fragment_file("src/shaders/shader.frag")
+			.build();
 
 		unsafe {
 			let camidx = gl.GetUniformBlockIndex(shader.handle(), "Camera\0".as_ptr() as _);
