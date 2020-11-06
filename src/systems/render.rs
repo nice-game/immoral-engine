@@ -9,73 +9,51 @@ use crate::{
 	RenderAllocs,
 };
 use glrs::{
+	alloc::{Allocation, Allocator},
 	buffer::{Buffer, BufferSlice, DynamicBuffer},
-	gl::{self, types::GLuint, Gl},
+	gl::{self},
 	shader::ShaderProgram,
 	texture::Texture,
 	vertex::VertexArray,
+	RenderSysDrawCommand,
 };
-use shipyard::{IntoIter, NonSendSync, UniqueView, UniqueViewMut, View, World};
-use std::{ffi::CString, iter::repeat, mem::size_of, ptr, rc::Rc};
+use shipyard::{IntoIter, NonSendSync, Shiperator, UniqueView, UniqueViewMut, View, World};
+use std::{mem::size_of, rc::Rc};
 
 pub fn render_init(world: &World, allocs: &Rc<RenderAllocs>) {
 	world.add_unique_non_send_sync(RenderState::new(allocs));
 }
 
 pub fn render(
-	state: NonSendSync<UniqueViewMut<RenderState>>,
+	mut state: NonSendSync<UniqueViewMut<RenderState>>,
 	player: UniqueView<PlayerController>,
 	models: NonSendSync<View<Model>>,
 ) {
 	state.cambuf.write(&player.cam.uniform);
 
-	// unsafe {
-	// let mut cmd_counter = 0;
-	// let cmd = if !state.cmd_phase { &mut state.cmd_a } else { &mut state.cmd_b };
-	// for model in models.iter() {
-	// 	for mesh in &model.meshes {
-	// 		cmd[cmd_counter].count = mesh.index_count() as u32;
-	// 		cmd[cmd_counter].instance_count = 1;
-	// 		cmd[cmd_counter].first_index = mesh.index_offset() as u32;
-	// 		cmd[cmd_counter].base_vertex = mesh.buf.offset() as u32;
-	// 		cmd[cmd_counter].base_instance = mesh.instance.offset() as u32;
-	// 		cmd_counter += 1;
-	// 	}
-	// }
-	// if !state.cmd_phase {
-	// 	state.cmd_a_length = cmd_counter;
-	// 	state.cmd_phase = false;
-	// } else {
-	// 	state.cmd_b_length = cmd_counter;
-	// 	state.cmd_phase = true;
-	// }
-	// let gl = &state.allocs.ctx().gl;
-	// gl.BindVertexArray(state.vao[1]);
-	// gl.MultiDrawElementsIndirect(
-	// gl::TRIANGLES,
-	// gl::UNSIGNED_SHORT,
-	// if state.cmd_phase {state.cmd_a.offset()} else {state.cmd_b.offset()} as _,
-	// if state.cmd_phase {state.cmd_a_length} else {state.cmd_b_length} as _,
-	// 0,
-	// );
-	// }
-	state.allocs.ctx().use_program(&state.shader);
-	state.allocs.ctx().bind_vertex_array(&state.vao);
-	for model in models.iter() {
-		for mesh in &model.meshes {
-			state.allocs.ctx().draw_elements_instanced(mesh.indices(), &mesh.buf, &mesh.instance);
-		}
-	}
-}
+	let cmdbuf = if !state.cmd_phase { &state.cmd_a } else { &state.cmd_b };
 
-#[derive(Clone, Copy, Default)]
-#[repr(C)]
-struct RenderSysDrawCommand {
-	count: u32,
-	instance_count: u32,
-	first_index: u32,
-	base_vertex: u32,
-	base_instance: u32,
+	let cmds: Vec<_> = models
+		.iter()
+		.map(|model| model.meshes.iter())
+		.into_iterator()
+		.flatten()
+		.map(|mesh| RenderSysDrawCommand {
+			count: mesh.indices().len() as _,
+			instance_count: mesh.instance.len() as _,
+			first_index: mesh.indices().offset() as _,
+			base_vertex: mesh.buf.offset() as _,
+			base_instance: mesh.instance.offset() as _,
+		})
+		.collect();
+	cmdbuf.write_range(0, &cmds);
+
+	let ctx = state.allocs.ctx();
+	ctx.use_program(&state.shader);
+	ctx.bind_vertex_array(&state.vao);
+	ctx.multi_draw_elements_indirect(cmdbuf);
+
+	state.cmd_phase = !state.cmd_phase;
 }
 
 pub struct RenderState {
@@ -83,11 +61,9 @@ pub struct RenderState {
 	vao: VertexArray,
 	shader: ShaderProgram,
 	cambuf: Rc<DynamicBuffer<CameraUniform>>,
-	/* cmd_a: Buffer<[RenderSysDrawCommand]>,
-	 * cmd_b: Buffer<[RenderSysDrawCommand]>,
-	 * cmd_a_length: usize,
-	 * cmd_b_length: usize,
-	 * cmd_phase: bool, */
+	cmd_a: Allocation<RenderSysDrawCommand>,
+	cmd_b: Allocation<RenderSysDrawCommand>,
+	cmd_phase: bool,
 }
 impl RenderState {
 	fn new(allocs: &Rc<RenderAllocs>) -> Self {
@@ -111,29 +87,20 @@ impl RenderState {
 
 			let cambuf = Buffer::from_val(ctx, &CameraUniform::default());
 
-			// let cmd_a = allocs.alloc_other_slice(&[RenderSysDrawCommand::default(); 100]);
-			// let cmd_b = allocs.alloc_other_slice(&[RenderSysDrawCommand::default(); 100]);
+			let cmdalloc = Allocator::<RenderSysDrawCommand>::new(ctx, 200);
+			let cmd_a = cmdalloc.alloc_default_slice(100);
+			let cmd_b = cmdalloc.alloc_default_slice(100);
 
 			gl.BindBufferRange(gl::UNIFORM_BUFFER, camidx, cambuf.handle(), 0, size_of::<CameraUniform>() as _);
 
-			gl.UseProgram(shader.handle());
+			ctx.use_program(&shader);
 			gl.ActiveTexture(gl::TEXTURE0);
 			gl.BindTexture(gl::TEXTURE_2D_ARRAY, allocs.tex.handle());
 			gl.Uniform1i(gl.GetUniformLocation(shader.handle(), "tex\0".as_ptr() as _), 0);
 
 			// gl.BindBuffer(gl::DRAW_INDIRECT_BUFFER, allocs.other_alloc.id);
 
-			Self {
-				allocs: allocs.clone(),
-				vao,
-				shader,
-				cambuf,
-				/* cmd_a,
-				 * cmd_b,
-				 * cmd_a_length: 0,
-				 * cmd_b_length: 0,
-				 * cmd_phase: false, */
-			}
+			Self { allocs: allocs.clone(), vao, shader, cambuf, cmd_a, cmd_b, cmd_phase: false }
 		}
 	}
 }

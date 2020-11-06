@@ -15,7 +15,6 @@ use crate::{
 };
 pub use gl;
 pub use memoffset;
-use std::mem::size_of;
 
 use crate::framebuffer::DefaultFramebuffer;
 use gl::Gl;
@@ -24,7 +23,7 @@ use glutin::{
 	window::{Window, WindowBuilder},
 	ContextBuilder, ContextWrapper, GlProfile, PossiblyCurrent,
 };
-use std::rc::Rc;
+use std::{mem::size_of, rc::Rc};
 
 pub struct Ctx {
 	window: ContextWrapper<PossiblyCurrent, Window>,
@@ -70,6 +69,13 @@ impl Ctx {
 		};
 	}
 
+	pub fn multi_draw_elements_indirect(&self, cmds: &dyn BufferSlice<RenderSysDrawCommand>) {
+		unsafe {
+			self.gl.BindBuffer(gl::DRAW_INDIRECT_BUFFER, cmds.handle());
+			self.gl.MultiDrawElementsIndirect(gl::TRIANGLES, gl::UNSIGNED_SHORT, cmds.offset() as _, cmds.len() as _, 0)
+		};
+	}
+
 	pub fn flush(&self) {
 		unsafe { self.gl.Flush() };
 	}
@@ -85,4 +91,14 @@ impl Ctx {
 	pub fn window(&self) -> &ContextWrapper<PossiblyCurrent, Window> {
 		&self.window
 	}
+}
+
+#[derive(Clone, Copy, Default)]
+#[repr(C)]
+pub struct RenderSysDrawCommand {
+	pub count: u32,
+	pub instance_count: u32,
+	pub first_index: u32,
+	pub base_vertex: u32,
+	pub base_instance: u32,
 }

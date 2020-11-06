@@ -76,20 +76,10 @@ impl<T: Copy + 'static, const DYN: bool> Buffer<[T], DYN> {
 		self.len
 	}
 }
-impl<T: Copy + 'static> Buffer<[T], true> {
-	pub fn write_range(&self, offset: usize, val: &[T]) {
-		let offset = offset * size_of::<T>();
-		let size = val.len() * size_of::<T>();
-		unsafe { self.ctx.gl.NamedBufferSubData(self.handle, offset as _, size as _, val.as_ptr() as _) };
-	}
-}
-impl<T: ?Sized, const DYN: bool> Buffer<T, DYN> {
-	pub fn ctx(&self) -> &Rc<Ctx> {
-		&self.ctx
-	}
-
-	pub fn handle(&self) -> GLuint {
-		self.handle
+impl<T: Copy + Default + 'static, const DYN: bool> Buffer<[T], DYN> {
+	pub fn default_slice(ctx: &Rc<Ctx>, len: usize) -> Rc<Self> {
+		let data = vec![T::default(); len];
+		Self::from_slice(ctx, &data[..])
 	}
 }
 impl<T: ?Sized, const DYN: bool> Drop for Buffer<T, DYN> {
@@ -97,7 +87,28 @@ impl<T: ?Sized, const DYN: bool> Drop for Buffer<T, DYN> {
 		unsafe { self.ctx.gl.DeleteBuffers(1, &self.handle) };
 	}
 }
+impl<T, const DYN: bool> BufferSlice<T> for Rc<Buffer<T, DYN>> {
+	fn ctx(&self) -> &Rc<Ctx> {
+		&self.ctx
+	}
+
+	fn handle(&self) -> GLuint {
+		self.handle
+	}
+
+	fn offset(&self) -> usize {
+		0
+	}
+
+	fn len(&self) -> usize {
+		self.len
+	}
+}
 impl<T, const DYN: bool> BufferSlice<T> for Rc<Buffer<[T], DYN>> {
+	fn ctx(&self) -> &Rc<Ctx> {
+		&self.ctx
+	}
+
 	fn handle(&self) -> GLuint {
 		self.handle
 	}
@@ -112,9 +123,16 @@ impl<T, const DYN: bool> BufferSlice<T> for Rc<Buffer<[T], DYN>> {
 }
 
 pub trait BufferSlice<T> {
+	fn ctx(&self) -> &Rc<Ctx>;
 	fn handle(&self) -> GLuint;
 	fn offset(&self) -> usize;
 	fn len(&self) -> usize;
+
+	fn write_range(&self, offset: usize, val: &[T]) {
+		let offset = offset * size_of::<T>() + self.offset();
+		let size = val.len() * size_of::<T>();
+		unsafe { self.ctx().gl.NamedBufferSubData(self.handle(), offset as _, size as _, val.as_ptr() as _) };
+	}
 }
 
 unsafe fn create_buffer_with_storage(gl: &Gl, size: GLsizeiptr, data: *const c_void, flags: GLbitfield) -> GLuint {

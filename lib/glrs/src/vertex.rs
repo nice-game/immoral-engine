@@ -1,6 +1,6 @@
 use crate::{
 	alloc::{Allocator, AllocatorAbstract},
-	buffer::DynamicBuffer,
+	buffer::{BufferSlice, DynamicBuffer},
 	Ctx,
 };
 use gl::types::{GLenum, GLint, GLuint};
@@ -108,7 +108,6 @@ impl VertexArray {
 
 	pub fn enable_vertices<V: Vertex>(&mut self, divisor: GLuint) {
 		let format = V::format();
-		println!("{:?}", format);
 		let gl = &self.ctx.gl;
 		for &VertexAttributeFormat { offset, size, typ } in &format {
 			unsafe {

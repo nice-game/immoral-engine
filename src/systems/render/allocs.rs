@@ -1,6 +1,6 @@
 use crate::{components::model::Instance, systems::render::Vertex};
 use glrs::{
-	alloc::{Allocation, Allocator},
+	alloc::{Allocation, Allocator, AllocatorAbstract},
 	texture::{Filter, Texture, Texture3D},
 	Ctx,
 };
@@ -44,6 +44,6 @@ impl RenderAllocs {
 	}
 
 	pub fn ctx(&self) -> &Rc<Ctx> {
-		&self.vert_alloc.ctx()
+		self.vert_alloc.ctx()
 	}
 }

@@ -6,6 +6,7 @@ use gl::types::GLuint;
 use std::{cell::Cell, marker::PhantomData, mem::size_of, rc::Rc, slice};
 
 pub trait AllocatorAbstract {
+	fn ctx(&self) -> &Rc<Ctx>;
 	fn buffer(&self) -> &Rc<DynamicBuffer<[u8]>>;
 }
 
@@ -14,9 +15,9 @@ pub struct Allocator<T, S = PackedStrategy> {
 	free: Cell<usize>,
 	strategy: PhantomData<(T, S)>,
 }
-impl<T: 'static, S: AllocatorStrategy> Allocator<T, S> {
+impl<T: Copy + 'static, S: AllocatorStrategy> Allocator<T, S> {
 	pub fn new(ctx: &Rc<Ctx>, size: usize) -> Rc<Self> {
-		let buffer = unsafe { DynamicBuffer::uninitialized_slice(ctx, size) };
+		let buffer = unsafe { DynamicBuffer::uninitialized_slice(ctx, size * size_of::<T>()) };
 		Rc::new(Self { buffer, free: Cell::new(0), strategy: PhantomData })
 	}
 
@@ -29,16 +30,22 @@ impl<T: 'static, S: AllocatorStrategy> Allocator<T, S> {
 		Allocation { alloc: self.clone(), offset, len, phantom: PhantomData }
 	}
 
-	pub fn ctx(&self) -> &Rc<Ctx> {
-		self.buffer.ctx()
-	}
-
 	fn align(&self, n: usize) -> usize {
 		let align = S::align(self.buffer.ctx());
 		(n + align - 1) / align * align
 	}
 }
+impl<T: Copy + Default + 'static, S: AllocatorStrategy> Allocator<T, S> {
+	pub fn alloc_default_slice(self: &Rc<Self>, len: usize) -> Allocation<T> {
+		let data = vec![T::default(); len];
+		self.alloc_slice(&data[..])
+	}
+}
 impl<T, S> AllocatorAbstract for Allocator<T, S> {
+	fn ctx(&self) -> &Rc<Ctx> {
+		self.buffer.ctx()
+	}
+
 	fn buffer(&self) -> &Rc<DynamicBuffer<[u8]>> {
 		&self.buffer
 	}
@@ -66,16 +73,11 @@ pub struct Allocation<T> {
 	pub len: usize,
 	phantom: PhantomData<T>,
 }
-impl<T> Allocation<T> {
-	// pub fn buf(&self) -> &[u8] {
-	// 	unsafe { slice::from_raw_parts_mut(self.alloc.buf.as_ptr().add(self.offset as _) as _, self.size) }
-	// }
-
-	// pub fn buf_mut(&mut self) -> &mut [u8] {
-	// 	unsafe { slice::from_raw_parts_mut(self.alloc.buf.as_ptr().add(self.offset as _) as _, self.size) }
-	// }
-}
 impl<T: Copy + 'static> BufferSlice<T> for Allocation<T> {
+	fn ctx(&self) -> &Rc<Ctx> {
+		self.alloc.ctx()
+	}
+
 	fn handle(&self) -> GLuint {
 		self.alloc.buffer().handle()
 	}
