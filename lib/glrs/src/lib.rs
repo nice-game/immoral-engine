@@ -3,20 +3,20 @@
 
 pub mod alloc;
 pub mod buffer;
+pub mod commands;
 pub mod framebuffer;
 pub mod shader;
 pub mod texture;
 pub mod vertex;
 
-use crate::{
-	buffer::BufferSlice,
-	shader::ShaderProgram,
-	vertex::{Vertex, VertexArray},
-};
+use crate::texture::Texture;
 pub use gl;
 pub use memoffset;
 
-use crate::framebuffer::DefaultFramebuffer;
+use crate::{
+	buffer::BufferSlice, commands::CommandBufferAbstract, framebuffer::DefaultFramebuffer, shader::ShaderProgram,
+	vertex::Vertex,
+};
 use gl::Gl;
 use glutin::{
 	event_loop::EventLoop,
@@ -69,10 +69,11 @@ impl Ctx {
 		};
 	}
 
-	pub fn multi_draw_elements_indirect(&self, cmds: &dyn BufferSlice<RenderSysDrawCommand>) {
+	pub fn multi_draw_elements_indirect(&self, cmds: impl CommandBufferAbstract) {
 		unsafe {
+			self.gl.BindVertexArray(cmds.vao().handle());
 			self.gl.BindBuffer(gl::DRAW_INDIRECT_BUFFER, cmds.handle());
-			self.gl.MultiDrawElementsIndirect(gl::TRIANGLES, gl::UNSIGNED_SHORT, cmds.offset() as _, cmds.len() as _, 0)
+			self.gl.MultiDrawElementsIndirect(gl::TRIANGLES, gl::UNSIGNED_SHORT, cmds.indirect(), cmds.len() as _, 0)
 		};
 	}
 
@@ -80,25 +81,18 @@ impl Ctx {
 		unsafe { self.gl.Flush() };
 	}
 
-	pub fn use_program(&self, program: &ShaderProgram) {
-		unsafe { self.gl.UseProgram(program.handle()) };
+	pub fn bind_texture(&self, idx: u32, tex: &dyn Texture) {
+		unsafe {
+			self.gl.ActiveTexture(gl::TEXTURE0 + idx);
+			self.gl.BindTexture(gl::TEXTURE_2D_ARRAY, tex.handle());
+		}
 	}
 
-	pub fn bind_vertex_array(&self, vao: &VertexArray) {
-		unsafe { self.gl.BindVertexArray(vao.handle()) };
+	pub fn use_program(&self, program: &ShaderProgram) {
+		unsafe { self.gl.UseProgram(program.handle()) };
 	}
 
 	pub fn window(&self) -> &ContextWrapper<PossiblyCurrent, Window> {
 		&self.window
 	}
-}
-
-#[derive(Clone, Copy, Default)]
-#[repr(C)]
-pub struct RenderSysDrawCommand {
-	pub count: u32,
-	pub instance_count: u32,
-	pub first_index: u32,
-	pub base_vertex: u32,
-	pub base_instance: u32,
 }
