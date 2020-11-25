@@ -53,7 +53,7 @@ fn get_textures(file: &Path, scene: &Scene, alloc: &RenderAllocs) -> Vec<f32> {
 				let (w, h) = img.dimensions();
 				let buf = ImmutableBuffer::from_slice(alloc.ctx(), &img.into_raw());
 				let idx = alloc.tex_free.fetch_add(1, Ordering::Relaxed);
-				alloc.tex.subimage_u8([0, 0, idx], [w as _, h as _, 1], gl::RGBA, &buf);
+				alloc.tex.subimage_u8([0, 0, idx].into(), [w as _, h as _, 1].into(), gl::RGBA, &buf);
 				idx as f32
 			} else {
 				-1.0

@@ -11,7 +11,9 @@ use crate::{
 use glrs::{
 	buffer::{Buffer, BufferSlice, DynamicBuffer},
 	commands::CommandBuffer,
+	framebuffer::Framebuffer,
 	shader::ShaderProgram,
+	texture::Texture2D,
 	vertex::VertexArray,
 };
 use shipyard::{IntoIter, NonSendSync, UniqueView, View, World};
@@ -72,6 +74,12 @@ impl RenderState {
 			.build();
 		shader.set_uniform_i32("tex", 0);
 		shader.bind_buffer_range("Camera", cambuf.clone());
+
+		let [width, height]: [_; 2] = ctx.window().window().inner_size().into();
+		let color = Texture2D::new(ctx, [width, height].into());
+
+		let framebuffer = Framebuffer::new(ctx);
+		framebuffer.color(0, &color);
 
 		Self { allocs: allocs.clone(), vao, shader, cambuf }
 	}

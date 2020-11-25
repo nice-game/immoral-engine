@@ -1,8 +1,8 @@
-use crate::Ctx;
+use crate::{texture::TextureAbstract, Ctx};
 use gl::types::GLuint;
 use std::rc::Rc;
 
-pub trait Framebuffer {
+pub trait FramebufferAbstract {
 	fn ctx(&self) -> &Rc<Ctx>;
 	fn handle(&self) -> GLuint;
 
@@ -20,12 +20,33 @@ impl DefaultFramebuffer {
 		Self { ctx: ctx.clone() }
 	}
 }
-impl Framebuffer for DefaultFramebuffer {
+impl FramebufferAbstract for DefaultFramebuffer {
 	fn ctx(&self) -> &Rc<Ctx> {
 		&self.ctx
 	}
 
 	fn handle(&self) -> GLuint {
 		0
+	}
+}
+
+pub struct Framebuffer {
+	ctx: Rc<Ctx>,
+	handle: GLuint,
+}
+impl Framebuffer {
+	pub fn new(ctx: &Rc<Ctx>) -> Self {
+		let mut handle = 0;
+		unsafe { ctx.gl.CreateFramebuffers(1, &mut handle) };
+		Self { ctx: ctx.clone(), handle }
+	}
+
+	pub fn color(&self, idx: u32, texture: &dyn TextureAbstract) {
+		unsafe { self.ctx.gl.NamedFramebufferTexture(self.handle, gl::COLOR_ATTACHMENT0 + idx, texture.handle(), 0) };
+	}
+}
+impl Drop for Framebuffer {
+	fn drop(&mut self) {
+		unsafe { self.ctx.gl.DeleteFramebuffers(1, &self.handle) };
 	}
 }

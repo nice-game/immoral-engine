@@ -9,7 +9,7 @@ pub mod shader;
 pub mod texture;
 pub mod vertex;
 
-use crate::texture::Texture;
+use crate::texture::TextureAbstract;
 pub use gl;
 pub use memoffset;
 
@@ -81,10 +81,10 @@ impl Ctx {
 		unsafe { self.gl.Flush() };
 	}
 
-	pub fn bind_texture(&self, idx: u32, tex: &dyn Texture) {
+	pub fn bind_texture(&self, idx: u32, tex: &dyn TextureAbstract) {
 		unsafe {
 			self.gl.ActiveTexture(gl::TEXTURE0 + idx);
-			self.gl.BindTexture(gl::TEXTURE_2D_ARRAY, tex.handle());
+			self.gl.BindTexture(tex.target(), tex.handle());
 		}
 	}
 

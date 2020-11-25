@@ -1,7 +1,7 @@
 use crate::{components::model::Instance, systems::render::Vertex};
 use glrs::{
 	alloc::{Allocation, Allocator, AllocatorAbstract},
-	texture::{Filter, Texture, Texture3D},
+	texture::{Filter, Texture2DArray, TextureAbstract},
 	Ctx,
 };
 use std::{rc::Rc, slice, sync::atomic::AtomicI32};
@@ -10,13 +10,13 @@ pub struct RenderAllocs {
 	pub vert_alloc: Rc<Allocator<Vertex>>,
 	pub idx_alloc: Rc<Allocator<u16>>,
 	pub instance_alloc: Rc<Allocator<Instance>>,
-	pub tex: Texture3D,
+	pub tex: Texture2DArray,
 	// TODO: make non-atomic, since this struct is !Sync
 	pub tex_free: AtomicI32,
 }
 impl RenderAllocs {
 	pub fn new(ctx: &Rc<Ctx>) -> Rc<Self> {
-		let tex = Texture3D::new(ctx, 1024, 1024, 64);
+		let tex = Texture2DArray::new(ctx, [1024, 1024, 64].into());
 		tex.min_filter(Filter::Linear);
 		tex.mag_filter(Filter::Linear);
 

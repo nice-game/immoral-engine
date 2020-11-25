@@ -674,6 +674,7 @@ dependencies = [
  "nalgebra",
  "safe-transmute",
  "simba",
+ "typenum",
 ]
 
 [[package]]

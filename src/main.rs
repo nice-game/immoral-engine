@@ -12,7 +12,7 @@ use crate::{
 		render::{allocs::RenderAllocs, render, render_init},
 	},
 };
-use glrs::{framebuffer::Framebuffer, Ctx};
+use glrs::{framebuffer::FramebufferAbstract, Ctx};
 use glutin::{
 	event::{DeviceEvent, Event, WindowEvent},
 	event_loop::{ControlFlow, EventLoop},
