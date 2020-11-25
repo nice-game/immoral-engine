@@ -4,14 +4,11 @@ version = "0.1.0"
 authors = ["Icy Defiance <icydefiance@gmail.com>"]
 edition = "2018"
 
-[workspace]
-members = ["lib/gl", "lib/glrs"]
-
 [dependencies]
 array-init = "0.1.1"
 assimp = { path = "lib/assimp" }
 assimp-sys = { path = "lib/assimp-sys" }
-glrs = { path = "lib/glrs" }
+glrs = { git = "https://github.com/nice-game/glrs" }
 glutin = "0.24.1"
 image = "0.23.9"
 nalgebra = "0.22.0"
